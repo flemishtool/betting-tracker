@@ -49,6 +49,7 @@ async function main() {
     { name: 'National League', country: 'England', apiFootballId: 43, over15GoalsRate: 0.83, over25GoalsRate: 0.65, avgGoalsPerMatch: 2.55 },
     { name: 'FA Cup', country: 'England', apiFootballId: 45, over15GoalsRate: 0.84, over25GoalsRate: 0.67, avgGoalsPerMatch: 2.65 },
     { name: 'EFL Cup', country: 'England', apiFootballId: 48, over15GoalsRate: 0.85, over25GoalsRate: 0.69, avgGoalsPerMatch: 2.75 },
+    { name: 'EFL Trophy', country: 'England', apiFootballId: 46, over15GoalsRate: 0.83, over25GoalsRate: 0.65, avgGoalsPerMatch: 2.55 },
 
     // ==================== SPAIN ====================
     { name: 'La Liga', country: 'Spain', apiFootballId: 140, over15GoalsRate: 0.85, over25GoalsRate: 0.68, avgGoalsPerMatch: 2.65 },
@@ -84,15 +85,18 @@ async function main() {
     // ==================== BELGIUM ====================
     { name: 'Pro League', country: 'Belgium', apiFootballId: 144, over15GoalsRate: 0.88, over25GoalsRate: 0.72, avgGoalsPerMatch: 2.95 },
     { name: 'Challenger Pro League', country: 'Belgium', apiFootballId: 145, over15GoalsRate: 0.85, over25GoalsRate: 0.68, avgGoalsPerMatch: 2.72 },
+    { name: 'Greek Cup', country: 'Greece', apiFootballId: 198, over15GoalsRate: 0.82, over25GoalsRate: 0.63, avgGoalsPerMatch: 2.48 },
 
     // ==================== SCOTLAND ====================
     { name: 'Premiership', country: 'Scotland', apiFootballId: 179, over15GoalsRate: 0.88, over25GoalsRate: 0.72, avgGoalsPerMatch: 2.90 },
     { name: 'Championship', country: 'Scotland', apiFootballId: 180, over15GoalsRate: 0.85, over25GoalsRate: 0.68, avgGoalsPerMatch: 2.72 },
     { name: 'Scottish Cup', country: 'Scotland', apiFootballId: 182, over15GoalsRate: 0.86, over25GoalsRate: 0.69, avgGoalsPerMatch: 2.78 },
+    { name: 'Scottish League Cup', country: 'Scotland', apiFootballId: 181, over15GoalsRate: 0.85, over25GoalsRate: 0.68, avgGoalsPerMatch: 2.72 },
 
     // ==================== TURKEY ====================
     { name: 'Süper Lig', country: 'Turkey', apiFootballId: 203, over15GoalsRate: 0.86, over25GoalsRate: 0.70, avgGoalsPerMatch: 2.78 },
     { name: '1. Lig', country: 'Turkey', apiFootballId: 204, over15GoalsRate: 0.83, over25GoalsRate: 0.65, avgGoalsPerMatch: 2.55 },
+    { name: 'Turkish Cup', country: 'Turkey', apiFootballId: 206, over15GoalsRate: 0.84, over25GoalsRate: 0.66, avgGoalsPerMatch: 2.60 },
 
     // ==================== AUSTRIA ====================
     { name: 'Bundesliga', country: 'Austria', apiFootballId: 218, over15GoalsRate: 0.89, over25GoalsRate: 0.74, avgGoalsPerMatch: 3.05 },
@@ -104,10 +108,12 @@ async function main() {
 
     // ==================== GREECE ====================
     { name: 'Super League', country: 'Greece', apiFootballId: 197, over15GoalsRate: 0.83, over25GoalsRate: 0.64, avgGoalsPerMatch: 2.48 },
+    { name: 'Greek Cup', country: 'Greece', apiFootballId: 198, over15GoalsRate: 0.82, over25GoalsRate: 0.63, avgGoalsPerMatch: 2.48 },
 
     // ==================== DENMARK ====================
     { name: 'Superliga', country: 'Denmark', apiFootballId: 119, over15GoalsRate: 0.88, over25GoalsRate: 0.73, avgGoalsPerMatch: 2.98 },
     { name: '1st Division', country: 'Denmark', apiFootballId: 120, over15GoalsRate: 0.85, over25GoalsRate: 0.68, avgGoalsPerMatch: 2.72 },
+    { name: 'Danish Cup', country: 'Denmark', apiFootballId: 121, over15GoalsRate: 0.86, over25GoalsRate: 0.70, avgGoalsPerMatch: 2.82 },
 
     // ==================== NORWAY ====================
     { name: 'Eliteserien', country: 'Norway', apiFootballId: 103, over15GoalsRate: 0.89, over25GoalsRate: 0.75, avgGoalsPerMatch: 3.08 },
@@ -116,6 +122,7 @@ async function main() {
     // ==================== SWEDEN ====================
     { name: 'Allsvenskan', country: 'Sweden', apiFootballId: 113, over15GoalsRate: 0.87, over25GoalsRate: 0.72, avgGoalsPerMatch: 2.92 },
     { name: 'Superettan', country: 'Sweden', apiFootballId: 114, over15GoalsRate: 0.84, over25GoalsRate: 0.67, avgGoalsPerMatch: 2.68 },
+    { name: 'Svenska Cupen', country: 'Sweden', apiFootballId: 115, over15GoalsRate: 0.85, over25GoalsRate: 0.68, avgGoalsPerMatch: 2.72 },
 
     // ==================== FINLAND ====================
     { name: 'Veikkausliiga', country: 'Finland', apiFootballId: 244, over15GoalsRate: 0.86, over25GoalsRate: 0.70, avgGoalsPerMatch: 2.80 },
@@ -150,6 +157,7 @@ async function main() {
 
     // ==================== ASIA ====================
     { name: 'Pro League', country: 'Saudi Arabia', apiFootballId: 307, over15GoalsRate: 0.86, over25GoalsRate: 0.70, avgGoalsPerMatch: 2.80 },
+    { name: 'Kings Cup', country: 'Saudi Arabia', apiFootballId: 308, over15GoalsRate: 0.85, over25GoalsRate: 0.68, avgGoalsPerMatch: 2.70 },
     { name: 'J1 League', country: 'Japan', apiFootballId: 98, over15GoalsRate: 0.86, over25GoalsRate: 0.69, avgGoalsPerMatch: 2.75 },
     { name: 'J2 League', country: 'Japan', apiFootballId: 99, over15GoalsRate: 0.84, over25GoalsRate: 0.66, avgGoalsPerMatch: 2.62 },
     { name: 'K League 1', country: 'South Korea', apiFootballId: 292, over15GoalsRate: 0.85, over25GoalsRate: 0.68, avgGoalsPerMatch: 2.70 },
@@ -166,6 +174,11 @@ async function main() {
     { name: 'Champions League', country: 'Europe', apiFootballId: 2, over15GoalsRate: 0.88, over25GoalsRate: 0.73, avgGoalsPerMatch: 2.95 },
     { name: 'Europa League', country: 'Europe', apiFootballId: 3, over15GoalsRate: 0.86, over25GoalsRate: 0.70, avgGoalsPerMatch: 2.82 },
     { name: 'Conference League', country: 'Europe', apiFootballId: 848, over15GoalsRate: 0.87, over25GoalsRate: 0.71, avgGoalsPerMatch: 2.88 },
+
+    // ==================== WOMEN'S FOOTBALL ====================
+    { name: 'WSL', country: 'England Women', apiFootballId: 712, over15GoalsRate: 0.88, over25GoalsRate: 0.74, avgGoalsPerMatch: 3.05 },
+    { name: 'Championship', country: 'England Women', apiFootballId: 713, over15GoalsRate: 0.86, over25GoalsRate: 0.70, avgGoalsPerMatch: 2.85 },
+    { name: 'UEFA Womens Champions League', country: 'Europe Women', apiFootballId: 750, over15GoalsRate: 0.89, over25GoalsRate: 0.76, avgGoalsPerMatch: 3.15 },
 
     // ==================== INTERNATIONAL ====================
     { name: 'World Cup', country: 'International', apiFootballId: 1, over15GoalsRate: 0.85, over25GoalsRate: 0.68, avgGoalsPerMatch: 2.65 },

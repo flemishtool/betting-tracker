@@ -43,7 +43,6 @@ interface Selection {
 // Get current datetime in local format for input
 function getCurrentDateTime(): string {
   const now = new Date();
-  // Format: YYYY-MM-DDTHH:MM
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
@@ -63,6 +62,47 @@ function formatMatchDateTime(dateTimeStr: string): string {
     minute: '2-digit',
   });
 }
+
+// Country display order - most used countries first
+const COUNTRY_ORDER = [
+  'England',
+  'England Women',
+  'Spain',
+  'Germany',
+  'Italy',
+  'France',
+  'Netherlands',
+  'Portugal',
+  'Belgium',
+  'Scotland',
+  'Turkey',
+  'Austria',
+  'Switzerland',
+  'Greece',
+  'Denmark',
+  'Norway',
+  'Sweden',
+  'Finland',
+  'Czech Republic',
+  'Poland',
+  'Croatia',
+  'Serbia',
+  'Romania',
+  'Ukraine',
+  'Russia',
+  'Ireland',
+  'Wales',
+  'Saudi Arabia',
+  'Japan',
+  'South Korea',
+  'China',
+  'Australia',
+  'USA',
+  'Mexico',
+  'Europe',
+  'Europe Women',
+  'International',
+];
 
 export default function NewBetPage({ params }: { params: { streamId: string } }) {
   const router = useRouter();
@@ -124,6 +164,39 @@ export default function NewBetPage({ params }: { params: { streamId: string } })
     });
     return grouped;
   }, [markets]);
+
+  // Group leagues by country (sorted by COUNTRY_ORDER)
+  const leaguesByCountry = useMemo(() => {
+    const grouped: Record<string, League[]> = {};
+    
+    leagues.forEach(league => {
+      if (!grouped[league.country]) {
+        grouped[league.country] = [];
+      }
+      grouped[league.country].push(league);
+    });
+
+    // Sort leagues within each country alphabetically
+    Object.keys(grouped).forEach(country => {
+      grouped[country].sort((a, b) => a.name.localeCompare(b.name));
+    });
+
+    return grouped;
+  }, [leagues]);
+
+  // Get sorted country list
+  const sortedCountries = useMemo(() => {
+    const countries = Object.keys(leaguesByCountry);
+    return countries.sort((a, b) => {
+      const indexA = COUNTRY_ORDER.indexOf(a);
+      const indexB = COUNTRY_ORDER.indexOf(b);
+      // If not in order list, put at end alphabetically
+      if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+  }, [leaguesByCountry]);
 
   const categories = Object.keys(marketsByCategory).sort();
 
@@ -224,7 +297,7 @@ export default function NewBetPage({ params }: { params: { streamId: string } })
           marketId: s.marketId,
           selection: s.selection,
           odds: Number(s.odds),
-          matchDate: s.matchDateTime, // This will be parsed as full datetime
+          matchDate: s.matchDateTime,
         })),
       };
 
@@ -442,7 +515,7 @@ export default function NewBetPage({ params }: { params: { streamId: string } })
             </p>
           </div>
 
-          {/* League Selection */}
+          {/* League Selection - GROUPED BY COUNTRY */}
           <div>
             <label className="mb-1 block text-sm font-medium">League</label>
             <select
@@ -451,10 +524,14 @@ export default function NewBetPage({ params }: { params: { streamId: string } })
               className="w-full rounded-lg border bg-background px-4 py-2"
             >
               <option value="">Select a league...</option>
-              {leagues.map(league => (
-                <option key={league.id} value={league.id}>
-                  {league.name} ({league.country})
-                </option>
+              {sortedCountries.map(country => (
+                <optgroup key={country} label={`🏴 ${country}`}>
+                  {leaguesByCountry[country].map(league => (
+                    <option key={league.id} value={league.id}>
+                      {league.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
