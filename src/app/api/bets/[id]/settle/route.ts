@@ -6,12 +6,14 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const body = await request.json();
-    const { selections } = body;
+    const { result, selectionResults } = await request.json();
 
     const bet = await prisma.bet.findUnique({
       where: { id: params.id },
-      include: { stream: true, selections: true },
+      include: {
+        selections: true,
+        stream: true,
+      },
     });
 
     if (!bet) {
@@ -22,153 +24,134 @@ export async function POST(
       return NextResponse.json({ error: 'Bet already settled' }, { status: 400 });
     }
 
-    // Update each selection and track market performance
-    for (const sel of selections) {
-      const selection = bet.selections.find(s => s.id === sel.id);
-      
-      await prisma.selection.update({
-        where: { id: sel.id },
-        data: {
-          status: sel.status,
-          settledAt: new Date(),
-        },
-      });
-
-      // Update market stats if marketId exists
-      if (selection?.marketId) {
-        const market = await prisma.marketType.findUnique({
-          where: { id: selection.marketId },
+    // Update each selection's result
+    if (selectionResults && typeof selectionResults === 'object') {
+      for (const [selectionId, selResult] of Object.entries(selectionResults)) {
+        const selection = bet.selections.find(s => s.id === selectionId);
+        
+        await prisma.selection.update({
+          where: { id: selectionId },
+          data: {
+            status: selResult as string,
+            result: selResult as string,
+            settledAt: new Date(),
+          },
         });
 
-        if (market) {
-          const newTotal = market.totalSelections + 1;
-          const newWon = market.wonSelections + (sel.status === 'won' ? 1 : 0);
-
-          await prisma.marketType.update({
-            where: { id: selection.marketId },
-            data: {
-              totalSelections: newTotal,
-              wonSelections: newWon,
-              actualHitRate: newWon / newTotal,
-            },
+        // Update market stats by market name (not marketId)
+        if (selection?.market) {
+          const market = await prisma.marketType.findUnique({
+            where: { name: selection.market },
           });
+
+          if (market) {
+            await prisma.marketType.update({
+              where: { name: selection.market },
+              data: {
+                totalSelections: market.totalSelections + 1,
+                wonSelections: selResult === 'won' ? market.wonSelections + 1 : market.wonSelections,
+                actualHitRate: (market.wonSelections + (selResult === 'won' ? 1 : 0)) / (market.totalSelections + 1),
+              },
+            });
+          }
         }
-      }
 
-      // Update league stats if leagueId exists
-      if (selection?.leagueId) {
-        const league = await prisma.league.findUnique({
-          where: { id: selection.leagueId },
-        });
-
-        if (league) {
-          const newTotal = league.totalSelections + 1;
-          const newWon = league.wonSelections + (sel.status === 'won' ? 1 : 0);
-
-          await prisma.league.update({
+        // Update league stats
+        if (selection?.leagueId) {
+          const league = await prisma.league.findUnique({
             where: { id: selection.leagueId },
-            data: {
-              totalSelections: newTotal,
-              wonSelections: newWon,
-              actualHitRate: newWon / newTotal,
-            },
           });
+
+          if (league) {
+            await prisma.league.update({
+              where: { id: selection.leagueId },
+              data: {
+                totalSelections: league.totalSelections + 1,
+                wonSelections: selResult === 'won' ? league.wonSelections + 1 : league.wonSelections,
+                actualHitRate: (league.wonSelections + (selResult === 'won' ? 1 : 0)) / (league.totalSelections + 1),
+              },
+            });
+          }
         }
       }
     }
 
-    const anyLost = selections.some((s: any) => s.status === 'lost');
-    const stream = bet.stream!;
+    // Determine overall bet result
+    const allWon = bet.selections.length > 0 && 
+      Object.values(selectionResults || {}).every(r => r === 'won');
+    const betResult = result || (allWon ? 'won' : 'lost');
 
-    if (anyLost) {
-      // BET LOST - Stream fails
-      await prisma.bet.update({
-        where: { id: params.id },
-        data: {
-          status: 'lost',
-          returns: 0,
-          profit: -bet.stake,
-          settledAt: new Date(),
-        },
-      });
+    // Calculate returns
+    const returns = betResult === 'won' ? bet.stake * bet.totalOdds : 0;
+    const profitLoss = betResult === 'won' ? returns - bet.stake : -bet.stake;
 
-      await prisma.stream.update({
-        where: { id: stream.id },
-        data: {
-          status: 'failed',
-          currentBalance: 0,
-          lostBets: stream.lostBets + 1,
-          actualWinRate: stream.totalBets > 0 ? stream.wonBets / stream.totalBets : 0,
-          endedAt: new Date(),
-        },
-      });
+    // Update bet
+    const updatedBet = await prisma.bet.update({
+      where: { id: params.id },
+      data: {
+        status: betResult,
+        returns: returns,
+        profitLoss: profitLoss,
+        settledAt: new Date(),
+      },
+      include: {
+        selections: true,
+        stream: true,
+      },
+    });
 
-      // Update bankroll
-      const bankroll = await prisma.bankroll.findFirst();
-      if (bankroll) {
-        const netLoss = stream.initialStake - stream.totalCashedOut;
-        await prisma.bankroll.update({
-          where: { id: bankroll.id },
-          data: {
-            deployedCapital: Math.max(0, bankroll.deployedCapital - stream.currentBalance),
-            lifetimeProfitLoss: bankroll.lifetimeProfitLoss - netLoss,
-          },
-        });
+    // Update stream
+    if (bet.stream) {
+      const newBalance = betResult === 'won' 
+        ? bet.stream.currentBalance + returns - bet.stake + bet.stake  // stake was already deducted conceptually
+        : bet.stream.currentBalance; // Lost - balance already reflects stake
+
+      // Actually for compound betting, stake = current balance
+      // If won: new balance = stake * odds = currentBalance * odds
+      // If lost: new balance = 0 (stream fails) or we track it differently
+
+      const streamUpdate: any = {
+        currentDay: bet.stream.currentDay + 1,
+        wonBets: betResult === 'won' ? bet.stream.wonBets + 1 : bet.stream.wonBets,
+        lostBets: betResult === 'lost' ? bet.stream.lostBets + 1 : bet.stream.lostBets,
+      };
+
+      if (betResult === 'won') {
+        streamUpdate.currentBalance = returns;
+        streamUpdate.actualWinRate = (bet.stream.wonBets + 1) / (bet.stream.wonBets + bet.stream.lostBets + 1);
+      } else {
+        // Stream lost - mark as failed
+        streamUpdate.currentBalance = 0;
+        streamUpdate.status = 'failed';
+        streamUpdate.actualWinRate = bet.stream.wonBets / (bet.stream.wonBets + bet.stream.lostBets + 1);
       }
-    } else {
-      // BET WON
-      const returns = bet.stake * bet.totalOdds;
-      const profit = returns - bet.stake;
-      const cashoutAmount = returns * stream.cashoutPercentage;
-      const reinvestAmount = returns * stream.reinvestmentPercentage;
-
-      await prisma.bet.update({
-        where: { id: params.id },
-        data: {
-          status: 'won',
-          returns,
-          profit,
-          amountReinvested: reinvestAmount,
-          amountCashedOut: cashoutAmount,
-          balanceAfter: reinvestAmount,
-          settledAt: new Date(),
-        },
-      });
-
-      const targetReached = stream.targetBalance && reinvestAmount >= stream.targetBalance;
 
       await prisma.stream.update({
-        where: { id: stream.id },
-        data: {
-          currentBalance: reinvestAmount,
-          currentDay: stream.currentDay + 1,
-          totalCashedOut: stream.totalCashedOut + cashoutAmount,
-          wonBets: stream.wonBets + 1,
-          actualWinRate: (stream.wonBets + 1) / stream.totalBets,
-          status: targetReached ? 'completed' : 'active',
-          endedAt: targetReached ? new Date() : null,
-        },
+        where: { id: bet.streamId },
+        data: streamUpdate,
       });
 
       // Update bankroll
       const bankroll = await prisma.bankroll.findFirst();
       if (bankroll) {
-        const balanceChange = reinvestAmount - stream.currentBalance;
         await prisma.bankroll.update({
           where: { id: bankroll.id },
           data: {
-            availableCapital: bankroll.availableCapital + cashoutAmount,
-            totalCashedOutFromStreams: bankroll.totalCashedOutFromStreams + cashoutAmount,
-            deployedCapital: bankroll.deployedCapital + balanceChange,
-            lifetimeProfitLoss: bankroll.lifetimeProfitLoss + cashoutAmount,
+            lifetimeProfitLoss: bankroll.lifetimeProfitLoss + profitLoss,
+            deployedCapital: betResult === 'lost' 
+              ? bankroll.deployedCapital - bet.stake 
+              : bankroll.deployedCapital + profitLoss,
           },
         });
       }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(updatedBet);
   } catch (error) {
     console.error('Failed to settle bet:', error);
-    return NextResponse.json({ error: 'Failed to settle bet' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to settle bet: ' + (error instanceof Error ? error.message : 'Unknown error') },
+      { status: 500 }
+    );
   }
 }
