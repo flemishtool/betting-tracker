@@ -4,15 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:seed": "npx ts-node prisma/seed.ts",
-    "db:studio": "prisma studio",
-    "db:backup": "powershell -File ./scripts/backup-db.ps1",
-    "db:restore": "powershell -File ./scripts/restore-db.ps1"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
