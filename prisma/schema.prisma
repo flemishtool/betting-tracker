@@ -1,0 +1,302 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Bankroll {
+  id                         String   @id @default(uuid())
+  totalCapital               Float    @default(0)
+  availableCapital           Float    @default(0)
+  deployedCapital            Float    @default(0)
+  reservedCapital            Float    @default(0)
+  currency                   String   @default("GBP")
+  totalDeposited             Float    @default(0)
+  totalWithdrawn             Float    @default(0)
+  totalCashedOutFromStreams  Float    @default(0)
+  lifetimeProfitLoss         Float    @default(0)
+  maxConcurrentStreams       Int      @default(5)
+  maxSingleStreamPercentage  Float    @default(0.10)
+  maxTotalExposurePercentage Float    @default(0.50)
+  stopLossThreshold          Float    @default(0.30)
+  profitLockThreshold        Float    @default(2.0)
+  profitLockPercentage       Float    @default(0.50)
+  autoWithdrawEnabled        Boolean  @default(false)
+  autoWithdrawTrigger        Float    @default(1000)
+  autoWithdrawAmount         Float    @default(100)
+  status                     String   @default("active")
+  pausedReason               String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  transactions               BankrollTransaction[]
+}
+
+model BankrollTransaction {
+  id            String   @id @default(uuid())
+  bankrollId    String
+  bankroll      Bankroll @relation(fields: [bankrollId], references: [id])
+  type          String
+  amount        Float
+  balanceBefore Float
+  balanceAfter  Float
+  streamId      String?
+  notes         String?
+  createdAt     DateTime @default(now())
+}
+
+model Stream {
+  id                     String   @id @default(uuid())
+  name                   String
+  status                 String   @default("active")
+  initialStake           Float
+  currency               String   @default("GBP")
+  targetDailyOdds        Float    @default(1.10)
+  reinvestmentPercentage Float    @default(0.80)
+  cashoutPercentage      Float    @default(0.20)
+  targetBalance          Float?
+  targetDays             Int?
+  phaseRules             String?
+  currentBalance         Float
+  totalCashedOut         Float    @default(0)
+  currentDay             Int      @default(0)
+  totalBets              Int      @default(0)
+  wonBets                Int      @default(0)
+  lostBets               Int      @default(0)
+  actualWinRate          Float    @default(0)
+  createdAt              DateTime @default(now())
+  startedAt              DateTime @default(now())
+  endedAt                DateTime?
+  bets                   Bet[]
+}
+
+model Bet {
+  id                String   @id @default(uuid())
+  streamId          String
+  stream            Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  dayNumber         Int
+  date              DateTime @default(now())
+  stake             Float
+  totalOdds         Float
+  status            String   @default("pending")
+  returns           Float?
+  profit            Float?
+  amountReinvested  Float?
+  amountCashedOut   Float?
+  balanceAfter      Float?
+  placedAt          DateTime @default(now())
+  settledAt         DateTime?
+  selections        Selection[]
+}
+
+model Selection {
+  id                    String   @id @default(uuid())
+  betId                 String
+  bet                   Bet      @relation(fields: [betId], references: [id], onDelete: Cascade)
+  leagueId              String?
+  league                League?  @relation(fields: [leagueId], references: [id])
+  homeTeam              String
+  awayTeam              String
+  matchDate             DateTime
+  market                String
+  selection             String
+  odds                  Float
+  estimatedProbability  Float    @default(0.90)
+  status                String   @default("pending")
+  result                String?
+  apiFixtureId          String?
+  settledAt             DateTime?
+}
+
+model League {
+  id                  String      @id @default(uuid())
+  name                String
+  country             String
+  apiFootballId       Int?        @unique
+  avgGoalsPerMatch    Float?
+  over05GoalsRate     Float?
+  over15GoalsRate     Float?
+  over25GoalsRate     Float?
+  over35GoalsRate     Float?      // ADD THIS LINE
+  bttsYesRate         Float?
+  avgCardsPerMatch    Float?
+  avgCornersPerMatch  Float?
+  totalSelections     Int         @default(0)
+  wonSelections       Int         @default(0)
+  actualHitRate       Float       @default(0)
+  isActive            Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  selections Selection[]
+  fixtures   APIFixture[]
+}
+
+model MarketType {
+  id                  String  @id @default(uuid())
+  name                String  @unique
+  category            String
+  baselineProbability Float
+  typicalOddsLow      Float?
+  typicalOddsHigh     Float?
+  totalSelections     Int     @default(0)
+  wonSelections       Int     @default(0)
+  actualHitRate       Float   @default(0)
+  notes               String?
+}
+
+model DailySummary {
+  id                   String   @id @default(uuid())
+  date                 DateTime @unique
+  activeStreams        Int      @default(0)
+  betsPlaced           Int      @default(0)
+  betsWon              Int      @default(0)
+  betsLost             Int      @default(0)
+  totalStaked          Float    @default(0)
+  totalReturns         Float    @default(0)
+  totalProfit          Float    @default(0)
+  totalCashedOut       Float    @default(0)
+  cumulativeProfit     Float    @default(0)
+  cumulativeCashedOut  Float    @default(0)
+}
+
+model APIConfig {
+  id                    String   @id @default(uuid())
+  apiKey                String?
+  baseUrl               String   @default("https://v3.football.api-sports.io")
+  requestsPerMinute     Int      @default(450)
+  requestsPerDay        Int      @default(7500)
+  requestsToday         Int      @default(0)
+  requestsThisMinute    Int      @default(0)
+  lastRequestAt         DateTime?
+  lastResetAt           DateTime @default(now())
+  autoSyncFixtures      Boolean  @default(true)
+  syncDaysAhead         Int      @default(14)
+  autoSettleBets        Boolean  @default(true)
+  liveScoreTracking     Boolean  @default(false)
+  syncIntervalMinutes   Int      @default(2)
+  syncTeamStatistics    Boolean  @default(false)
+  syncHeadToHead        Boolean  @default(false)
+  syncPredictions       Boolean  @default(false)
+  syncOdds              Boolean  @default(false)
+  updatedAt             DateTime @updatedAt
+}
+
+model APIFixture {
+  id               String   @id @default(uuid())
+  apiFootballId    Int      @unique
+  leagueId         String?
+  league           League?  @relation(fields: [leagueId], references: [id])
+  apiLeagueId      Int
+  season           Int
+  homeTeamId       Int
+  homeTeamName     String
+  awayTeamId       Int
+  awayTeamName     String
+  kickoff          DateTime
+  venue            String?
+  status           String   @default("scheduled")
+  statusShort      String   @default("NS")
+  minute           Int?
+  homeGoals        Int?
+  awayGoals        Int?
+  homeGoalsHT      Int?
+  awayGoalsHT      Int?
+  homeCorners      Int?
+  awayCorners      Int?
+  homeYellowCards  Int?
+  awayYellowCards  Int?
+  homeRedCards     Int?
+  awayRedCards     Int?
+  homeShotsOnTarget Int?
+  awayShotsOnTarget Int?
+  lastSyncedAt     DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  odds             APIFixtureOdds[]
+  prediction       APIFixturePrediction?
+}
+
+model APIFixtureOdds {
+  id              String     @id @default(uuid())
+  fixtureId       String
+  fixture         APIFixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  bookmakerName   String
+  over05Goals     Float?
+  under05Goals    Float?
+  over15Goals     Float?
+  under15Goals    Float?
+  over25Goals     Float?
+  under25Goals    Float?
+  over35Goals     Float?
+  under35Goals    Float?
+  bttsYes         Float?
+  bttsNo          Float?
+  homeWin         Float?
+  draw            Float?
+  awayWin         Float?
+  homeOrDraw      Float?
+  awayOrDraw      Float?
+  homeOrAway      Float?
+  fetchedAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([fixtureId, bookmakerName])
+}
+
+model APIFixturePrediction {
+  id                  String     @id @default(uuid())
+  fixtureId           String     @unique
+  fixture             APIFixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  homeWinPercent      Float?
+  drawPercent         Float?
+  awayWinPercent      Float?
+  predictedHomeGoals  Float?
+  predictedAwayGoals  Float?
+  predictedTotalGoals Float?
+  advice              String?
+  over15Probability   Float?
+  over25Probability   Float?
+  bttsYesProbability  Float?
+  fetchedAt           DateTime @default(now())
+}
+
+model APIHeadToHead {
+  id                String   @id @default(uuid())
+  team1Id           Int
+  team2Id           Int
+  matchesAnalysed   Int      @default(0)
+  team1Wins         Int      @default(0)
+  team2Wins         Int      @default(0)
+  draws             Int      @default(0)
+  totalGoals        Int      @default(0)
+  avgGoalsPerMatch  Float    @default(0)
+  over15Rate        Float    @default(0)
+  over25Rate        Float    @default(0)
+  bttsRate          Float    @default(0)
+  recentResults     String?
+  lastSyncedAt      DateTime @default(now())
+  @@unique([team1Id, team2Id])
+}
+
+model APITeamStats {
+  id                  String   @id @default(uuid())
+  apiTeamId           Int
+  teamName            String
+  leagueApiId         Int
+  season              Int
+  goalsScoredTotal    Int      @default(0)
+  goalsScoredHome     Int      @default(0)
+  goalsScoredAway     Int      @default(0)
+  avgGoalsScored      Float    @default(0)
+  goalsConcededTotal  Int      @default(0)
+  avgGoalsConceded    Float    @default(0)
+  cleanSheets         Int      @default(0)
+  failedToScore       Int      @default(0)
+  over15Rate          Float    @default(0)
+  over25Rate          Float    @default(0)
+  bttsRate            Float    @default(0)
+  lastSyncedAt        DateTime @default(now())
+  @@unique([apiTeamId, leagueApiId, season])
+}
