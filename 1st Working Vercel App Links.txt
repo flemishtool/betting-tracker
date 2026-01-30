@@ -1,0 +1,3 @@
+betting-tracker-kappa.vercel.app
+
+https://betting-tracker-flemishtools-projects.vercel.app/
