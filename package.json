@@ -9,9 +9,10 @@
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "npx ts-node prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts"
+    "db:backup": "powershell -File ./scripts/backup-db.ps1",
+    "db:restore": "powershell -File ./scripts/restore-db.ps1"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -35,7 +36,7 @@
     "node-cron": "^3.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "^2.13.3",
+    "recharts": "^2.15.4",
     "tailwind-merge": "^2.5.4",
     "uuid": "^10.0.0",
     "zod": "^3.23.8"

@@ -1,0 +1,63 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const navLinks = [
+  { href: '/', label: 'Dashboard', icon: '📊' },
+  { href: '/streams', label: 'Streams', icon: '🌊' },
+  { href: '/bets', label: 'Bets', icon: '🎰' },
+  { href: '/markets', label: 'Markets', icon: '📈' },
+  { href: '/leagues', label: 'Leagues', icon: '🏆' },
+  { href: '/bankroll', label: 'Bankroll', icon: '💰' },
+  { href: '/analytics', label: 'Analytics', icon: '📉' },
+  { href: '/settings', label: 'Settings', icon: '⚙️' },
+];
+
+export default function Sidebar() {
+  const pathname = usePathname();
+
+  return (
+    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r bg-card">
+      <div className="flex h-full flex-col">
+        {/* Logo */}
+        <div className="border-b p-6">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-2xl">🎯</span>
+            <span className="text-xl font-bold">BetTracker</span>
+          </Link>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1 p-4">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href || 
+              (link.href !== '/' && pathname.startsWith(link.href));
+            
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                }`}
+              >
+                <span className="text-lg">{link.icon}</span>
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="border-t p-4">
+          <p className="text-xs text-muted-foreground text-center">
+            v1.0.0 • Bet Responsibly
+          </p>
+        </div>
+      </div>
+    </aside>
+  );
+}

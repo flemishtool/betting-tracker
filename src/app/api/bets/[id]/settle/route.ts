@@ -22,8 +22,10 @@ export async function POST(
       return NextResponse.json({ error: 'Bet already settled' }, { status: 400 });
     }
 
-    // Update each selection
+    // Update each selection and track market performance
     for (const sel of selections) {
+      const selection = bet.selections.find(s => s.id === sel.id);
+      
       await prisma.selection.update({
         where: { id: sel.id },
         data: {
@@ -31,6 +33,48 @@ export async function POST(
           settledAt: new Date(),
         },
       });
+
+      // Update market stats if marketId exists
+      if (selection?.marketId) {
+        const market = await prisma.marketType.findUnique({
+          where: { id: selection.marketId },
+        });
+
+        if (market) {
+          const newTotal = market.totalSelections + 1;
+          const newWon = market.wonSelections + (sel.status === 'won' ? 1 : 0);
+
+          await prisma.marketType.update({
+            where: { id: selection.marketId },
+            data: {
+              totalSelections: newTotal,
+              wonSelections: newWon,
+              actualHitRate: newWon / newTotal,
+            },
+          });
+        }
+      }
+
+      // Update league stats if leagueId exists
+      if (selection?.leagueId) {
+        const league = await prisma.league.findUnique({
+          where: { id: selection.leagueId },
+        });
+
+        if (league) {
+          const newTotal = league.totalSelections + 1;
+          const newWon = league.wonSelections + (sel.status === 'won' ? 1 : 0);
+
+          await prisma.league.update({
+            where: { id: selection.leagueId },
+            data: {
+              totalSelections: newTotal,
+              wonSelections: newWon,
+              actualHitRate: newWon / newTotal,
+            },
+          });
+        }
+      }
     }
 
     const anyLost = selections.some((s: any) => s.status === 'lost');
@@ -97,6 +141,7 @@ export async function POST(
         where: { id: stream.id },
         data: {
           currentBalance: reinvestAmount,
+          currentDay: stream.currentDay + 1,
           totalCashedOut: stream.totalCashedOut + cashoutAmount,
           wonBets: stream.wonBets + 1,
           actualWinRate: (stream.wonBets + 1) / stream.totalBets,

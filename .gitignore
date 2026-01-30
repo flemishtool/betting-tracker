@@ -38,3 +38,6 @@ Thumbs.db
 # Misc
 *.log
 .vercel
+
+# Database backups (local only)
+backups/
