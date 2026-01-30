@@ -39,7 +39,7 @@ export async function POST(
           },
         });
 
-        // Update market stats using market NAME (not marketId)
+        // Update market stats using market NAME
         if (selection && selection.market) {
           const marketType = await prisma.marketType.findUnique({
             where: { name: selection.market },
@@ -90,15 +90,13 @@ export async function POST(
 
     // Calculate returns
     const returns = betResult === 'won' ? bet.stake * bet.totalOdds : 0;
-    const profitLoss = betResult === 'won' ? returns - bet.stake : -bet.stake;
 
-    // Update bet
+    // Update bet (only use fields that exist in schema)
     const updatedBet = await prisma.bet.update({
       where: { id: params.id },
       data: {
         status: betResult,
         returns: returns,
-        profitLoss: profitLoss,
         settledAt: new Date(),
       },
       include: {
@@ -109,6 +107,8 @@ export async function POST(
 
     // Update stream
     if (bet.stream) {
+      const profitLoss = betResult === 'won' ? returns - bet.stake : -bet.stake;
+      
       const streamUpdateData: {
         currentDay: number;
         wonBets: number;

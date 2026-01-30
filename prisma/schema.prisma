@@ -83,6 +83,7 @@ model Bet {
   status           String      @default("pending")
   returns          Float?
   profit           Float?
+  profitLoss       Float?
   amountReinvested Float?
   amountCashedOut  Float?
   balanceAfter     Float?
