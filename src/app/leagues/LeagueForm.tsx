@@ -7,9 +7,9 @@ export default function LeagueForm() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [country, setCountry] = useState('');
-  const [tier, setTier] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +21,7 @@ export default function LeagueForm() {
 
     setIsSubmitting(true);
     setError('');
+    setSuccess('');
 
     try {
       const response = await fetch('/api/leagues', {
@@ -29,7 +30,6 @@ export default function LeagueForm() {
         body: JSON.stringify({ 
           name: name.trim(), 
           country: country.trim(),
-          tier: parseInt(tier),
         }),
       });
 
@@ -38,10 +38,12 @@ export default function LeagueForm() {
         throw new Error(data.error || 'Failed to create league');
       }
 
+      setSuccess(`${name} added successfully!`);
       setName('');
       setCountry('');
-      setTier('1');
       router.refresh();
+      
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create league');
     } finally {
@@ -49,11 +51,16 @@ export default function LeagueForm() {
     }
   };
 
-  const commonCountries = ['England', 'Spain', 'Germany', 'Italy', 'France', 'Portugal', 'Netherlands', 'Belgium', 'Scotland', 'Turkey'];
+  const commonCountries = [
+    'England', 'Spain', 'Germany', 'Italy', 'France', 
+    'Portugal', 'Netherlands', 'Belgium', 'Scotland', 'Turkey',
+    'Brazil', 'Argentina', 'USA', 'Mexico', 'Japan',
+    'Denmark', 'Norway', 'Sweden', 'Austria', 'Switzerland'
+  ];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="block text-sm font-medium mb-1">League Name</label>
           <input
@@ -81,24 +88,17 @@ export default function LeagueForm() {
             ))}
           </datalist>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Tier</label>
-          <select
-            value={tier}
-            onChange={(e) => setTier(e.target.value)}
-            className="w-full rounded-lg border bg-background px-4 py-2"
-          >
-            <option value="1">Tier 1 (Top League)</option>
-            <option value="2">Tier 2 (Second Div)</option>
-            <option value="3">Tier 3 (Lower)</option>
-          </select>
-        </div>
       </div>
 
       {error && (
         <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-500">
           {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-3 text-sm text-green-500">
+          {success}
         </div>
       )}
 

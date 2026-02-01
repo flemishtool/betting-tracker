@@ -1,5 +1,4 @@
 import prisma from '@/lib/prisma';
-import Link from 'next/link';
 import LeagueForm from './LeagueForm';
 
 export default async function LeaguesPage() {
@@ -23,7 +22,7 @@ export default async function LeaguesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">🏆 Leagues</h1>
-          <p className="text-muted-foreground">Manage your tracked leagues</p>
+          <p className="text-muted-foreground">Manage your tracked leagues ({leagues.length} total)</p>
         </div>
       </div>
 
@@ -37,7 +36,10 @@ export default async function LeaguesPage() {
       <div className="space-y-6">
         {Object.entries(leaguesByCountry).map(([country, countryLeagues]) => (
           <div key={country} className="rounded-xl border bg-card p-6">
-            <h2 className="text-lg font-semibold mb-4">{country}</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">{country}</h2>
+              <span className="text-sm text-muted-foreground">{countryLeagues.length} leagues</span>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {countryLeagues.map((league) => (
                 <div
@@ -50,15 +52,13 @@ export default async function LeaguesPage() {
                       {league._count.selections} selections
                     </p>
                   </div>
-                  {league.tier && (
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      league.tier === 1 ? 'bg-yellow-500/20 text-yellow-500' :
-                      league.tier === 2 ? 'bg-gray-500/20 text-gray-400' :
-                      'bg-orange-500/20 text-orange-500'
-                    }`}>
-                      Tier {league.tier}
-                    </span>
-                  )}
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    league.isActive 
+                      ? 'bg-green-500/20 text-green-500' 
+                      : 'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    {league.isActive ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
               ))}
             </div>
