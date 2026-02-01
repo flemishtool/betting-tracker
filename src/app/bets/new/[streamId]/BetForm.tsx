@@ -13,8 +13,10 @@ interface Selection {
   marketTypeName: string;
   homeTeam: string;
   awayTeam: string;
+  selection: string; // What was picked (e.g., "Home Win", "Over 2.5")
   odds: number;
   estimatedProbability: number;
+  matchTime: string;
 }
 
 interface Stream {
@@ -52,14 +54,26 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Get default date/time (now + 1 hour, rounded to nearest 15 min)
+  const getDefaultMatchTime = () => {
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    now.setMinutes(Math.round(now.getMinutes() / 15) * 15);
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+    return now.toISOString().slice(0, 16);
+  };
+
   // Current selection being built
   const [currentSelection, setCurrentSelection] = useState({
     leagueId: '',
     marketTypeId: '',
     homeTeam: '',
     awayTeam: '',
+    selection: '', // The pick (e.g., "Home Win", "Over 2.5")
     odds: '',
     estimatedProbability: '',
+    matchTime: getDefaultMatchTime(),
   });
 
   const stakeAmount = parseFloat(stake) || 0;
@@ -74,11 +88,17 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
     ? calculateKelly(stream.currentBalance, totalOdds, avgProbability)
     : null;
 
+  // Find earliest match time from selections
+  const earliestMatch = selections.length > 0
+    ? new Date(Math.min(...selections.map(s => new Date(s.matchTime).getTime())))
+    : null;
+
   const handleAddSelection = () => {
     if (!currentSelection.leagueId || !currentSelection.marketTypeId || 
         !currentSelection.homeTeam || !currentSelection.awayTeam || 
-        !currentSelection.odds) {
-      setError('Please fill in all selection fields');
+        !currentSelection.selection || !currentSelection.odds || 
+        !currentSelection.matchTime) {
+      setError('Please fill in all selection fields including your pick');
       return;
     }
 
@@ -100,8 +120,10 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
       marketTypeName: market.name,
       homeTeam: currentSelection.homeTeam,
       awayTeam: currentSelection.awayTeam,
+      selection: currentSelection.selection,
       odds: parseFloat(currentSelection.odds),
       estimatedProbability: parseFloat(currentSelection.estimatedProbability) / 100 || market.baselineProbability,
+      matchTime: currentSelection.matchTime,
     };
 
     setSelections([...selections, newSelection]);
@@ -110,8 +132,10 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
       marketTypeId: '',
       homeTeam: '',
       awayTeam: '',
+      selection: '',
       odds: '',
       estimatedProbability: '',
+      matchTime: getDefaultMatchTime(),
     });
     setError('');
   };
@@ -150,11 +174,13 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
           stake: stakeAmount,
           selections: selections.map(s => ({
             leagueId: s.leagueId,
-            marketTypeId: s.marketTypeId,
+            market: s.marketTypeName, // Market name as string
+            selection: s.selection, // The actual pick
             homeTeam: s.homeTeam,
             awayTeam: s.awayTeam,
             odds: s.odds,
             estimatedProbability: s.estimatedProbability,
+            matchTime: s.matchTime,
           })),
         }),
       });
@@ -172,6 +198,52 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
       setIsSubmitting(false);
     }
   };
+
+  // Format date for display
+  const formatMatchTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // Get selection suggestions based on market type
+  const getSelectionSuggestions = (marketTypeId: string): string[] => {
+    const market = Object.values(marketsByCategory)
+      .flat()
+      .find(m => m.id === marketTypeId);
+    
+    if (!market) return [];
+    
+    const marketName = market.name.toLowerCase();
+    
+    if (marketName.includes('match result') || marketName.includes('1x2')) {
+      return ['Home Win', 'Draw', 'Away Win'];
+    }
+    if (marketName.includes('over') || marketName.includes('under') || marketName.includes('goals')) {
+      return ['Over 0.5', 'Over 1.5', 'Over 2.5', 'Over 3.5', 'Under 0.5', 'Under 1.5', 'Under 2.5', 'Under 3.5'];
+    }
+    if (marketName.includes('btts') || marketName.includes('both teams')) {
+      return ['Yes', 'No'];
+    }
+    if (marketName.includes('double chance')) {
+      return ['Home or Draw', 'Away or Draw', 'Home or Away'];
+    }
+    if (marketName.includes('clean sheet')) {
+      return ['Home Clean Sheet', 'Away Clean Sheet', 'No Clean Sheet'];
+    }
+    if (marketName.includes('handicap')) {
+      return ['Home -1', 'Home -2', 'Away +1', 'Away +2'];
+    }
+    
+    return [];
+  };
+
+  const selectionSuggestions = getSelectionSuggestions(currentSelection.marketTypeId);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -268,6 +340,17 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
         <h2 className="text-lg font-semibold mb-4">➕ Add Selection</h2>
         
         <div className="grid gap-4 sm:grid-cols-2">
+          {/* Match Date/Time */}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium mb-1">📅 Match Date & Time</label>
+            <input
+              type="datetime-local"
+              value={currentSelection.matchTime}
+              onChange={(e) => setCurrentSelection({ ...currentSelection, matchTime: e.target.value })}
+              className="w-full rounded-lg border bg-background px-4 py-2"
+            />
+          </div>
+
           {/* League Select */}
           <div>
             <label className="block text-sm font-medium mb-1">League</label>
@@ -291,10 +374,14 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
 
           {/* Market Select */}
           <div>
-            <label className="block text-sm font-medium mb-1">Market</label>
+            <label className="block text-sm font-medium mb-1">Market Type</label>
             <select
               value={currentSelection.marketTypeId}
-              onChange={(e) => setCurrentSelection({ ...currentSelection, marketTypeId: e.target.value })}
+              onChange={(e) => setCurrentSelection({ 
+                ...currentSelection, 
+                marketTypeId: e.target.value,
+                selection: '' // Reset selection when market changes
+              })}
               className="w-full rounded-lg border bg-background px-4 py-2"
             >
               <option value="">Select market...</option>
@@ -332,6 +419,45 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
               className="w-full rounded-lg border bg-background px-4 py-2"
               placeholder="e.g., Chelsea"
             />
+          </div>
+
+          {/* Selection (Your Pick) */}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium mb-1">🎯 Your Pick</label>
+            {selectionSuggestions.length > 0 ? (
+              <div className="space-y-2">
+                <select
+                  value={currentSelection.selection}
+                  onChange={(e) => setCurrentSelection({ ...currentSelection, selection: e.target.value })}
+                  className="w-full rounded-lg border bg-background px-4 py-2"
+                >
+                  <option value="">Select your pick...</option>
+                  {selectionSuggestions.map((suggestion) => (
+                    <option key={suggestion} value={suggestion}>
+                      {suggestion}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Or type a custom pick:
+                </p>
+                <input
+                  type="text"
+                  value={currentSelection.selection}
+                  onChange={(e) => setCurrentSelection({ ...currentSelection, selection: e.target.value })}
+                  className="w-full rounded-lg border bg-background px-4 py-2"
+                  placeholder="e.g., Home Win, Over 2.5, BTTS Yes"
+                />
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={currentSelection.selection}
+                onChange={(e) => setCurrentSelection({ ...currentSelection, selection: e.target.value })}
+                className="w-full rounded-lg border bg-background px-4 py-2"
+                placeholder="e.g., Home Win, Over 2.5, BTTS Yes"
+              />
+            )}
           </div>
 
           {/* Odds */}
@@ -379,7 +505,7 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
           <h2 className="text-lg font-semibold mb-4">📋 Your Selections ({selections.length})</h2>
           
           <div className="space-y-3">
-            {selections.map((selection, index) => (
+            {selections.map((selection) => (
               <div
                 key={selection.id}
                 className="flex items-center justify-between rounded-lg border bg-muted/50 p-4"
@@ -388,8 +514,14 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
                   <p className="font-medium">
                     {selection.homeTeam} vs {selection.awayTeam}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selection.leagueName} • {selection.marketTypeName}
+                  <p className="text-sm text-primary font-medium">
+                    {selection.marketTypeName}: {selection.selection}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selection.leagueName}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    🕐 {formatMatchTime(selection.matchTime)}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -422,6 +554,12 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
               <span className="text-muted-foreground">Potential Returns:</span>
               <span className="font-bold text-green-500">{formatCurrency(potentialReturns, 'GBP')}</span>
             </div>
+            {earliestMatch && (
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">First Match:</span>
+                <span className="font-medium">{formatMatchTime(earliestMatch.toISOString())}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

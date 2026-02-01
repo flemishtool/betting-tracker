@@ -242,18 +242,21 @@ export default async function StreamDetailPage({ params }: Props) {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex-1">
                     {/* Selections */}
-                    <div className="space-y-1">
-                      {bet.selections.map((selection) => (
-                        <div key={selection.id} className="text-sm">
-                          <span className="font-medium">
-                            {selection.homeTeam} vs {selection.awayTeam}
-                          </span>
-                          <span className="text-primary font-medium">
-                            {' '}@ {selection.odds.toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+<div className="space-y-1">
+  {bet.selections.map((selection) => (
+    <div key={selection.id} className="text-sm">
+      <span className="font-medium">
+        {selection.homeTeam} vs {selection.awayTeam}
+      </span>
+      <span className="text-primary font-medium">
+        {' '}• {selection.market}: {selection.selection}
+      </span>
+      <span className="text-muted-foreground">
+        {' '}@ {selection.odds.toFixed(2)}
+      </span>
+    </div>
+  ))}
+</div>
                     
                     {/* Bet Meta */}
                     <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
