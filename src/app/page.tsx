@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { formatCurrency } from '@/lib/utils';
 import { calculateStreak } from '@/lib/analytics';
 import Link from 'next/link';
