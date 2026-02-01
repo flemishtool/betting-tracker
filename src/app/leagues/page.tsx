@@ -1,143 +1,77 @@
-import Link from 'next/link';
 import prisma from '@/lib/prisma';
-import { formatPercentage, formatDate } from '@/lib/utils';
-import SyncLeaguesButton from './SyncLeaguesButton';
-
-export const dynamic = 'force-dynamic';
+import Link from 'next/link';
+import LeagueForm from './LeagueForm';
 
 export default async function LeaguesPage() {
-  const [leagues, config] = await Promise.all([
-    prisma.league.findMany({
-      orderBy: [{ country: 'asc' }, { name: 'asc' }],
-    }),
-    prisma.aPIConfig.findFirst(),
-  ]);
-
-  // Group leagues by country
-  const leaguesByCountry: Record<string, typeof leagues> = {};
-  const internationalLeagues: typeof leagues = [];
-
-  leagues.forEach(league => {
-    if (league.country === 'Europe' || league.country === 'International') {
-      internationalLeagues.push(league);
-    } else {
-      if (!leaguesByCountry[league.country]) {
-        leaguesByCountry[league.country] = [];
-      }
-      leaguesByCountry[league.country].push(league);
-    }
+  const leagues = await prisma.league.findMany({
+    orderBy: [{ country: 'asc' }, { name: 'asc' }],
+    include: {
+      _count: { select: { selections: true } },
+    },
   });
 
-  const sortedCountries = Object.keys(leaguesByCountry).sort();
-  const hasApiKey = !!config?.apiKey;
+  // Group by country
+  const leaguesByCountry = leagues.reduce((acc, league) => {
+    const country = league.country || 'Other';
+    if (!acc[country]) acc[country] = [];
+    acc[country].push(league);
+    return acc;
+  }, {} as Record<string, typeof leagues>);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Leagues</h1>
-          <p className="text-muted-foreground">
-            {leagues.length} leagues with historical statistics
-          </p>
+          <h1 className="text-3xl font-bold">🏆 Leagues</h1>
+          <p className="text-muted-foreground">Manage your tracked leagues</p>
         </div>
-        <SyncLeaguesButton hasApiKey={hasApiKey} />
       </div>
 
-      {!hasApiKey && (
-        <div className="rounded-xl border-2 border-yellow-500/50 bg-yellow-500/10 p-4">
-          <p className="font-medium text-yellow-500">⚠️ API Key Not Configured</p>
-          <p className="text-sm text-muted-foreground">
-            Add your API-Football key in{' '}
-            <Link href="/settings" className="text-primary underline">Settings</Link>
-            {' '}to sync real statistics.
-          </p>
-        </div>
-      )}
+      {/* Add New League */}
+      <div className="rounded-xl border bg-card p-6">
+        <h2 className="text-lg font-semibold mb-4">➕ Add New League</h2>
+        <LeagueForm />
+      </div>
 
-      {/* Countries */}
-      {sortedCountries.map(country => (
-        <div key={country} className="space-y-4">
-          <h2 className="flex items-center gap-2 text-xl font-semibold">
-            <span className="text-2xl">🏴</span> {country}
-            <span className="text-sm font-normal text-muted-foreground">
-              ({leaguesByCountry[country].length})
-            </span>
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {leaguesByCountry[country].map(league => (
-              <LeagueCard key={league.id} league={league} />
-            ))}
+      {/* Leagues List */}
+      <div className="space-y-6">
+        {Object.entries(leaguesByCountry).map(([country, countryLeagues]) => (
+          <div key={country} className="rounded-xl border bg-card p-6">
+            <h2 className="text-lg font-semibold mb-4">{country}</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {countryLeagues.map((league) => (
+                <div
+                  key={league.id}
+                  className="flex items-center justify-between rounded-lg border bg-muted/50 p-4"
+                >
+                  <div>
+                    <p className="font-medium">{league.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {league._count.selections} selections
+                    </p>
+                  </div>
+                  {league.tier && (
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      league.tier === 1 ? 'bg-yellow-500/20 text-yellow-500' :
+                      league.tier === 2 ? 'bg-gray-500/20 text-gray-400' :
+                      'bg-orange-500/20 text-orange-500'
+                    }`}>
+                      Tier {league.tier}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      {/* International */}
-      {internationalLeagues.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="flex items-center gap-2 text-xl font-semibold">
-            <span className="text-2xl">🌍</span> International Competitions
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {internationalLeagues.map(league => (
-              <LeagueCard key={league.id} league={league} />
-            ))}
+        {leagues.length === 0 && (
+          <div className="rounded-xl border bg-card p-12 text-center text-muted-foreground">
+            <p className="text-lg">No leagues yet</p>
+            <p className="text-sm mt-1">Add your first league above</p>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function LeagueCard({ league }: { league: any }) {
-  return (
-    <div className="rounded-xl border bg-card p-4 transition-colors hover:bg-accent/50">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-semibold">{league.name}</h3>
-          <p className="text-sm text-muted-foreground">{league.country}</p>
-        </div>
+        )}
       </div>
-      
-      <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-lg bg-muted p-2 text-center">
-          <p className="text-xs text-muted-foreground">Avg Goals</p>
-          <p className="text-lg font-bold">{league.avgGoalsPerMatch?.toFixed(2) || '-'}</p>
-        </div>
-        <div className="rounded-lg bg-muted p-2 text-center">
-          <p className="text-xs text-muted-foreground">BTTS</p>
-          <p className="text-lg font-bold">
-            {league.bttsYesRate ? formatPercentage(league.bttsYesRate) : '-'}
-          </p>
-        </div>
-        <div className="rounded-lg bg-muted p-2 text-center">
-          <p className="text-xs text-muted-foreground">Over 1.5</p>
-          <p className="text-lg font-bold">
-            {league.over15GoalsRate ? formatPercentage(league.over15GoalsRate) : '-'}
-          </p>
-        </div>
-        <div className="rounded-lg bg-muted p-2 text-center">
-          <p className="text-xs text-muted-foreground">Over 2.5</p>
-          <p className="text-lg font-bold">
-            {league.over25GoalsRate ? formatPercentage(league.over25GoalsRate) : '-'}
-          </p>
-        </div>
-        <div className="rounded-lg bg-muted p-2 text-center">
-          <p className="text-xs text-muted-foreground">Over 3.5</p>
-          <p className="text-lg font-bold">
-            {league.over35GoalsRate ? formatPercentage(league.over35GoalsRate) : '-'}
-          </p>
-        </div>
-        <div className="rounded-lg bg-muted p-2 text-center">
-          <p className="text-xs text-muted-foreground">Over 0.5</p>
-          <p className="text-lg font-bold">
-            {league.over05GoalsRate ? formatPercentage(league.over05GoalsRate) : '-'}
-          </p>
-        </div>
-      </div>
-
-      <p className="mt-3 text-xs text-muted-foreground text-center">
-        Updated: {formatDate(league.updatedAt)}
-      </p>
     </div>
   );
 }

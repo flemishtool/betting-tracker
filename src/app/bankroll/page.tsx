@@ -1,104 +1,188 @@
-'use client';
+import prisma from '@/lib/prisma';
+import { formatCurrency } from '@/lib/utils';
+import BankrollManager from '@/components/BankrollManager';
+import Link from 'next/link';
 
-import { useState, useEffect } from 'react';
-import { formatCurrency, formatPercentage } from '@/lib/utils';
+export default async function BankrollPage() {
+  const [bankroll, streams, recentBets] = await Promise.all([
+    prisma.bankroll.findFirst(),
+    prisma.stream.findMany({
+      where: { status: 'active' },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.bet.findMany({
+      where: { status: { in: ['won', 'lost'] } },
+      include: { stream: true },
+      orderBy: { settledAt: 'desc' },
+      take: 10,
+    }),
+  ]);
 
-export default function BankrollPage() {
-  const [bankroll, setBankroll] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [depositAmount, setDepositAmount] = useState(100);
-  const [depositing, setDepositing] = useState(false);
-
-  useEffect(() => {
-    fetchBankroll();
-  }, []);
-
-  async function fetchBankroll() {
-    const res = await fetch('/api/bankroll');
-    const data = await res.json();
-    setBankroll(data);
-    setLoading(false);
+  if (!bankroll) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <h1 className="text-2xl font-bold mb-4">No Bankroll Found</h1>
+        <p className="text-muted-foreground mb-4">Set up your bankroll in Settings first.</p>
+        <Link href="/settings" className="rounded-lg bg-primary px-6 py-2 text-primary-foreground">
+          Go to Settings
+        </Link>
+      </div>
+    );
   }
 
-  async function handleDeposit() {
-    if (depositAmount <= 0) return;
-    setDepositing(true);
-    await fetch('/api/bankroll/deposit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: depositAmount, notes: 'Manual deposit' }),
-    });
-    await fetchBankroll();
-    setDepositing(false);
-  }
+  const totalBankroll = bankroll.totalCapital;
+  const availableCapital = bankroll.availableCapital;
+  const deployedCapital = bankroll.deployedCapital;
+  const totalProfit = bankroll.totalProfit;
 
-  if (loading) {
-    return <div className="flex h-96 items-center justify-center">Loading...</div>;
-  }
-
-  const exposurePercent = bankroll.totalCapital > 0
-    ? (bankroll.deployedCapital / bankroll.totalCapital) * 100
+  const deploymentPercent = totalBankroll > 0 
+    ? (deployedCapital / totalBankroll) * 100 
     : 0;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Bankroll Management</h1>
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold">💰 Bankroll Management</h1>
+        <p className="text-muted-foreground">Track and manage your betting capital</p>
+      </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border bg-card p-6">
+      {/* Main Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border bg-gradient-to-br from-primary/20 to-primary/5 p-6">
           <p className="text-sm text-muted-foreground">Total Bankroll</p>
-          <p className="text-2xl font-bold">{formatCurrency(bankroll.totalCapital)}</p>
+          <p className="mt-1 text-3xl font-bold text-primary">
+            {formatCurrency(totalBankroll, bankroll.currency)}
+          </p>
         </div>
-        <div className="rounded-xl border bg-card p-6">
-          <p className="text-sm text-muted-foreground">Available</p>
-          <p className="text-2xl font-bold text-green-500">{formatCurrency(bankroll.availableCapital)}</p>
+
+        <div className="rounded-xl border bg-gradient-to-br from-green-500/20 to-green-500/5 p-6">
+          <p className="text-sm text-muted-foreground">Available Capital</p>
+          <p className="mt-1 text-3xl font-bold text-green-500">
+            {formatCurrency(availableCapital, bankroll.currency)}
+          </p>
         </div>
-        <div className="rounded-xl border bg-card p-6">
-          <p className="text-sm text-muted-foreground">Deployed</p>
-          <p className="text-2xl font-bold text-yellow-500">{formatCurrency(bankroll.deployedCapital)}</p>
+
+        <div className="rounded-xl border bg-gradient-to-br from-blue-500/20 to-blue-500/5 p-6">
+          <p className="text-sm text-muted-foreground">Deployed in Streams</p>
+          <p className="mt-1 text-3xl font-bold text-blue-500">
+            {formatCurrency(deployedCapital, bankroll.currency)}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {deploymentPercent.toFixed(1)}% of bankroll
+          </p>
         </div>
-        <div className="rounded-xl border bg-card p-6">
-          <p className="text-sm text-muted-foreground">Lifetime P/L</p>
-          <p className={`text-2xl font-bold ${bankroll.lifetimeProfitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {bankroll.lifetimeProfitLoss >= 0 ? '+' : ''}{formatCurrency(bankroll.lifetimeProfitLoss)}
+
+        <div className={`rounded-xl border p-6 ${
+          totalProfit >= 0 
+            ? 'bg-gradient-to-br from-green-500/20 to-green-500/5' 
+            : 'bg-gradient-to-br from-red-500/20 to-red-500/5'
+        }`}>
+          <p className="text-sm text-muted-foreground">Total Profit/Loss</p>
+          <p className={`mt-1 text-3xl font-bold ${totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {totalProfit >= 0 ? '+' : ''}{formatCurrency(totalProfit, bankroll.currency)}
           </p>
         </div>
       </div>
 
-      {/* Exposure Bar */}
-      <div className="rounded-xl border bg-card p-6">
-        <div className="mb-2 flex justify-between text-sm">
-          <span>Exposure: {exposurePercent.toFixed(1)}%</span>
-          <span>Limit: {(bankroll.maxTotalExposurePercentage * 100).toFixed(0)}%</span>
-        </div>
-        <div className="h-4 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className={`h-full ${exposurePercent > bankroll.maxTotalExposurePercentage * 100 ? 'bg-red-500' : 'bg-green-500'}`}
-            style={{ width: `${Math.min(exposurePercent, 100)}%` }}
-          />
+      {/* Main Content */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Bankroll Manager */}
+        <BankrollManager
+          bankrollId={bankroll.id}
+          currentBalance={totalBankroll}
+          availableCapital={availableCapital}
+          currency={bankroll.currency}
+        />
+
+        {/* Active Streams */}
+        <div className="rounded-xl border bg-card p-6">
+          <h2 className="text-lg font-semibold mb-4">📊 Capital Deployment</h2>
+          
+          {/* Progress Bar */}
+          <div className="mb-6">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Deployment Rate</span>
+              <span className="font-medium">{deploymentPercent.toFixed(1)}%</span>
+            </div>
+            <div className="h-4 rounded-full bg-muted overflow-hidden">
+              <div 
+                className="h-full bg-blue-500 rounded-full transition-all"
+                style={{ width: `${Math.min(deploymentPercent, 100)}%` }}
+              />
+            </div>
+          </div>
+
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">Active Streams</h3>
+          {streams.length > 0 ? (
+            <div className="space-y-3">
+              {streams.map((stream) => (
+                <Link
+                  key={stream.id}
+                  href={`/streams/${stream.id}`}
+                  className="flex items-center justify-between rounded-lg border bg-muted/50 p-3 hover:bg-muted transition-colors"
+                >
+                  <div>
+                    <p className="font-medium">{stream.name}</p>
+                    <p className="text-xs text-muted-foreground">Day {stream.currentDay + 1}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-green-500">
+                      {formatCurrency(stream.currentBalance, bankroll.currency)}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4 text-center">No active streams</p>
+          )}
         </div>
       </div>
 
-      {/* Deposit */}
+      {/* Recent Activity */}
       <div className="rounded-xl border bg-card p-6">
-        <h2 className="mb-4 text-xl font-semibold">Deposit Funds</h2>
-        <div className="flex gap-4">
-          <input
-            type="number"
-            min="1"
-            value={depositAmount}
-            onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)}
-            className="w-32 rounded-lg border bg-background px-4 py-2"
-          />
-          <button
-            onClick={handleDeposit}
-            disabled={depositing || depositAmount <= 0}
-            className="rounded-lg bg-primary px-6 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            {depositing ? 'Depositing...' : 'Deposit'}
-          </button>
-        </div>
+        <h2 className="text-lg font-semibold mb-4">📜 Recent Activity</h2>
+        
+        {recentBets.length > 0 ? (
+          <div className="space-y-3">
+            {recentBets.map((bet) => (
+              <div
+                key={bet.id}
+                className={`flex items-center justify-between rounded-lg border p-3 ${
+                  bet.status === 'won'
+                    ? 'border-green-500/30 bg-green-500/5'
+                    : 'border-red-500/30 bg-red-500/5'
+                }`}
+              >
+                <div>
+                  <p className="font-medium">{bet.stream.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {bet.settledAt && new Date(bet.settledAt).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  {bet.status === 'won' ? (
+                    <p className="font-bold text-green-500">
+                      +{formatCurrency((bet.returns || 0) - bet.stake, bankroll.currency)}
+                    </p>
+                  ) : (
+                    <p className="font-bold text-red-500">
+                      -{formatCurrency(bet.stake, bankroll.currency)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground py-8 text-center">No recent activity</p>
+        )}
       </div>
     </div>
   );
