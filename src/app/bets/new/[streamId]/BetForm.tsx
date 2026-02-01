@@ -212,36 +212,134 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
   };
 
   // Get selection suggestions based on market type
-  const getSelectionSuggestions = (marketTypeId: string): string[] => {
-    const market = Object.values(marketsByCategory)
-      .flat()
-      .find(m => m.id === marketTypeId);
-    
-    if (!market) return [];
-    
-    const marketName = market.name.toLowerCase();
-    
-    if (marketName.includes('match result') || marketName.includes('1x2')) {
-      return ['Home Win', 'Draw', 'Away Win'];
-    }
-    if (marketName.includes('over') || marketName.includes('under') || marketName.includes('goals')) {
-      return ['Over 0.5', 'Over 1.5', 'Over 2.5', 'Over 3.5', 'Under 0.5', 'Under 1.5', 'Under 2.5', 'Under 3.5'];
-    }
-    if (marketName.includes('btts') || marketName.includes('both teams')) {
-      return ['Yes', 'No'];
-    }
-    if (marketName.includes('double chance')) {
-      return ['Home or Draw', 'Away or Draw', 'Home or Away'];
-    }
-    if (marketName.includes('clean sheet')) {
-      return ['Home Clean Sheet', 'Away Clean Sheet', 'No Clean Sheet'];
-    }
-    if (marketName.includes('handicap')) {
-      return ['Home -1', 'Home -2', 'Away +1', 'Away +2'];
-    }
-    
-    return [];
-  };
+const getSelectionSuggestions = (marketTypeId: string): string[] => {
+  const market = Object.values(marketsByCategory)
+    .flat()
+    .find(m => m.id === marketTypeId);
+  
+  if (!market) return [];
+  
+  const marketName = market.name.toLowerCase();
+  
+  // Match Result / 1X2
+  if (marketName.includes('match result') || marketName.includes('1x2')) {
+    return ['Home Win', 'Draw', 'Away Win'];
+  }
+  
+  // Specific Over/Under markets (e.g., "Under 6.5 Goals", "Over 2.5 Goals")
+  const overUnderMatch = marketName.match(/(over|under)\s*(\d+\.?\d*)/i);
+  if (overUnderMatch) {
+    const type = overUnderMatch[1].charAt(0).toUpperCase() + overUnderMatch[1].slice(1).toLowerCase();
+    const line = overUnderMatch[2];
+    return [`${type} ${line}`];
+  }
+  
+  // Generic Over/Under or Goals markets
+  if (marketName.includes('over') || marketName.includes('under') || marketName.includes('goals') || marketName.includes('total')) {
+    return [
+      'Over 0.5', 'Over 1.5', 'Over 2.5', 'Over 3.5', 'Over 4.5', 'Over 5.5', 'Over 6.5', 'Over 7.5',
+      'Under 0.5', 'Under 1.5', 'Under 2.5', 'Under 3.5', 'Under 4.5', 'Under 5.5', 'Under 6.5', 'Under 7.5'
+    ];
+  }
+  
+  // BTTS
+  if (marketName.includes('btts') || marketName.includes('both teams to score')) {
+    return ['Yes', 'No'];
+  }
+  
+  // Double Chance
+  if (marketName.includes('double chance')) {
+    return ['Home or Draw (1X)', 'Away or Draw (X2)', 'Home or Away (12)'];
+  }
+  
+  // Draw No Bet
+  if (marketName.includes('draw no bet')) {
+    return ['Home Win', 'Away Win'];
+  }
+  
+  // Clean Sheet
+  if (marketName.includes('clean sheet')) {
+    return ['Home Clean Sheet - Yes', 'Home Clean Sheet - No', 'Away Clean Sheet - Yes', 'Away Clean Sheet - No'];
+  }
+  
+  // Handicap / Spread
+  if (marketName.includes('handicap') || marketName.includes('spread')) {
+    return [
+      'Home -1', 'Home -1.5', 'Home -2', 'Home -2.5',
+      'Away +1', 'Away +1.5', 'Away +2', 'Away +2.5',
+      'Home +1', 'Home +1.5', 'Home +2', 'Home +2.5',
+      'Away -1', 'Away -1.5', 'Away -2', 'Away -2.5'
+    ];
+  }
+  
+  // Corners
+  if (marketName.includes('corner')) {
+    return [
+      'Over 7.5', 'Over 8.5', 'Over 9.5', 'Over 10.5', 'Over 11.5',
+      'Under 7.5', 'Under 8.5', 'Under 9.5', 'Under 10.5', 'Under 11.5'
+    ];
+  }
+  
+  // Cards
+  if (marketName.includes('card')) {
+    return [
+      'Over 2.5', 'Over 3.5', 'Over 4.5', 'Over 5.5',
+      'Under 2.5', 'Under 3.5', 'Under 4.5', 'Under 5.5'
+    ];
+  }
+  
+  // Half Time Result
+  if (marketName.includes('half time') || marketName.includes('ht result')) {
+    return ['Home Win', 'Draw', 'Away Win'];
+  }
+  
+  // Half Time / Full Time
+  if (marketName.includes('ht/ft') || marketName.includes('half time/full time')) {
+    return [
+      'Home/Home', 'Home/Draw', 'Home/Away',
+      'Draw/Home', 'Draw/Draw', 'Draw/Away',
+      'Away/Home', 'Away/Draw', 'Away/Away'
+    ];
+  }
+  
+  // First/Last/Anytime Goalscorer
+  if (marketName.includes('goalscorer') || marketName.includes('to score')) {
+    return ['Player Name (type below)'];
+  }
+  
+  // Correct Score
+  if (marketName.includes('correct score')) {
+    return [
+      '1-0', '2-0', '2-1', '3-0', '3-1', '3-2',
+      '0-0', '1-1', '2-2', '3-3',
+      '0-1', '0-2', '1-2', '0-3', '1-3', '2-3'
+    ];
+  }
+  
+  // Win to Nil
+  if (marketName.includes('win to nil')) {
+    return ['Home Win to Nil', 'Away Win to Nil'];
+  }
+  
+  // First Half Goals
+  if (marketName.includes('first half') && marketName.includes('goal')) {
+    return [
+      'Over 0.5 FH', 'Over 1.5 FH', 'Over 2.5 FH',
+      'Under 0.5 FH', 'Under 1.5 FH', 'Under 2.5 FH'
+    ];
+  }
+  
+  // Second Half Goals
+  if (marketName.includes('second half') && marketName.includes('goal')) {
+    return [
+      'Over 0.5 SH', 'Over 1.5 SH', 'Over 2.5 SH',
+      'Under 0.5 SH', 'Under 1.5 SH', 'Under 2.5 SH'
+    ];
+  }
+  
+  // Default - empty (use text input)
+  return [];
+};
 
   const selectionSuggestions = getSelectionSuggestions(currentSelection.marketTypeId);
 
@@ -373,29 +471,48 @@ export default function BetForm({ stream, leaguesByCountry, marketsByCategory }:
           </div>
 
           {/* Market Select */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Market Type</label>
-            <select
-              value={currentSelection.marketTypeId}
-              onChange={(e) => setCurrentSelection({ 
-                ...currentSelection, 
-                marketTypeId: e.target.value,
-                selection: '' // Reset selection when market changes
-              })}
-              className="w-full rounded-lg border bg-background px-4 py-2"
-            >
-              <option value="">Select market...</option>
-              {Object.entries(marketsByCategory).map(([category, markets]) => (
-                <optgroup key={category} label={category}>
-                  {markets.map((market) => (
-                    <option key={market.id} value={market.id}>
-                      {market.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </div>
+<div>
+  <label className="block text-sm font-medium mb-1">Market Type</label>
+  <select
+    value={currentSelection.marketTypeId}
+    onChange={(e) => {
+      const marketId = e.target.value;
+      const market = Object.values(marketsByCategory)
+        .flat()
+        .find(m => m.id === marketId);
+      
+      // Auto-fill selection if market name contains the pick
+      let autoSelection = '';
+      if (market) {
+        const marketName = market.name.toLowerCase();
+        const overUnderMatch = marketName.match(/(over|under)\s*(\d+\.?\d*)/i);
+        if (overUnderMatch) {
+          const type = overUnderMatch[1].charAt(0).toUpperCase() + overUnderMatch[1].slice(1).toLowerCase();
+          const line = overUnderMatch[2];
+          autoSelection = `${type} ${line}`;
+        }
+      }
+      
+      setCurrentSelection({ 
+        ...currentSelection, 
+        marketTypeId: marketId,
+        selection: autoSelection
+      });
+    }}
+    className="w-full rounded-lg border bg-background px-4 py-2"
+  >
+    <option value="">Select market...</option>
+    {Object.entries(marketsByCategory).map(([category, markets]) => (
+      <optgroup key={category} label={category}>
+        {markets.map((market) => (
+          <option key={market.id} value={market.id}>
+            {market.name}
+          </option>
+        ))}
+      </optgroup>
+    ))}
+  </select>
+</div>
 
           {/* Home Team */}
           <div>
