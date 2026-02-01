@@ -56,9 +56,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
         where: { id },
         data: {
           currentBalance: newBalance,
-          // If depositing, also update starting balance to reflect total investment
+          // If depositing, also update initial stake to reflect total investment
           ...(type === 'deposit' && {
-            startingBalance: stream.startingBalance + amount,
+            initialStake: stream.initialStake + amount,
           }),
         },
       });
@@ -86,9 +86,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
           });
         }
       }
-
-      // Create a transaction record (optional - for history)
-      // You could create a StreamTransaction model for this
 
       return updatedStream;
     });

@@ -51,9 +51,9 @@ export default async function StreamDetailPage({ params }: Props) {
   const netProfit = totalReturns - bets.filter((b) => b.status !== 'pending').reduce((sum, b) => sum + b.stake, 0);
 
   // Growth calculation
-  const growthPercent = stream.startingBalance > 0
-    ? ((stream.currentBalance - stream.startingBalance) / stream.startingBalance) * 100
-    : 0;
+  const growthPercent = stream.initialStake > 0
+  ? ((stream.currentBalance - stream.initialStake) / stream.initialStake) * 100
+  : 0;
 
   const currency = bankroll?.currency || 'GBP';
 
@@ -94,7 +94,7 @@ export default async function StreamDetailPage({ params }: Props) {
             {formatCurrency(stream.currentBalance, currency)}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            Started: {formatCurrency(stream.startingBalance, currency)}
+            Started: {formatCurrency(stream.initialStake, currency)}
           </p>
         </div>
 
@@ -222,7 +222,7 @@ export default async function StreamDetailPage({ params }: Props) {
               <p className="text-xs text-muted-foreground mb-1">Projected Final (at target)</p>
               <p className="text-xl font-bold text-primary">
                 {formatCurrency(
-                  stream.startingBalance * Math.pow(stream.targetDailyOdds, stream.totalDays),
+                  stream.initialStake * Math.pow(stream.targetDailyOdds, stream.totalDays),
                   currency
                 )}
               </p>
