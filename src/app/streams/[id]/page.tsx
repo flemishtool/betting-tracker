@@ -52,6 +52,11 @@ export default async function StreamDetailPage({ params }: Props) {
 
   const currency = bankroll?.currency || 'GBP';
 
+  // Calculate days active
+  const daysActive = Math.floor(
+    (new Date().getTime() - new Date(stream.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+  ) + 1;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -67,7 +72,7 @@ export default async function StreamDetailPage({ params }: Props) {
           </div>
           <h1 className="mt-2 text-3xl font-bold">{stream.name}</h1>
           <p className="text-muted-foreground">
-            Day {stream.currentDay + 1} of {stream.totalDays} • Target: {stream.targetDailyOdds.toFixed(2)}x daily
+            Day {stream.currentDay + 1} • Target: {stream.targetDailyOdds.toFixed(2)}x daily
           </p>
         </div>
         <div className="flex gap-2">
@@ -130,7 +135,7 @@ export default async function StreamDetailPage({ params }: Props) {
       </div>
 
       {/* Stream Management Section */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Funds Manager */}
         <div className="rounded-xl border bg-card p-6">
           <h2 className="text-lg font-semibold mb-4">💰 Manage Funds</h2>
@@ -180,8 +185,12 @@ export default async function StreamDetailPage({ params }: Props) {
               <span className="font-medium">{stream.targetDailyOdds.toFixed(2)}x</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">Day {stream.currentDay + 1} / {stream.totalDays}</span>
+              <span className="text-muted-foreground">Days Active</span>
+              <span className="font-medium">{daysActive} days</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Current Day</span>
+              <span className="font-medium">Day {stream.currentDay + 1}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Staked</span>
@@ -191,41 +200,15 @@ export default async function StreamDetailPage({ params }: Props) {
               <span className="text-muted-foreground">Total Returns</span>
               <span className="font-medium">{formatCurrency(totalReturns, currency)}</span>
             </div>
-          </div>
-        </div>
-
-        {/* Target Progress */}
-        <div className="rounded-xl border bg-card p-6">
-          <h2 className="text-lg font-semibold mb-4">🎯 Target Progress</h2>
-          <div className="space-y-4">
-            {/* Progress Bar */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Days Completed</span>
-                <span className="font-medium">{Math.round((stream.currentDay / stream.totalDays) * 100)}%</span>
-              </div>
-              <div className="h-3 rounded-full bg-muted overflow-hidden">
-                <div 
-                  className="h-full bg-primary rounded-full transition-all"
-                  style={{ width: `${(stream.currentDay / stream.totalDays) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Projected Final */}
-            <div className="rounded-lg bg-muted/50 p-3">
-              <p className="text-xs text-muted-foreground mb-1">Projected Final (at target)</p>
-              <p className="text-xl font-bold text-primary">
-                {formatCurrency(
-                  stream.initialStake * Math.pow(stream.targetDailyOdds, stream.totalDays),
-                  currency
-                )}
-              </p>
-            </div>
-
-            {/* Days Remaining */}
-            <div className="text-center text-sm text-muted-foreground">
-              {stream.totalDays - stream.currentDay} days remaining
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Created</span>
+              <span className="font-medium">
+                {new Date(stream.createdAt).toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
             </div>
           </div>
         </div>
