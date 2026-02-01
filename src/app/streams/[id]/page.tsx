@@ -20,12 +20,7 @@ export default async function StreamDetailPage({ params }: Props) {
     prisma.bet.findMany({
       where: { streamId: id },
       include: {
-        selections: {
-          include: {
-            league: true,
-            marketType: true,
-          },
-        },
+        selections: true,
       },
       orderBy: { placedAt: 'desc' },
     }),
@@ -41,7 +36,7 @@ export default async function StreamDetailPage({ params }: Props) {
   const wonBets = bets.filter((b) => b.status === 'won').length;
   const lostBets = bets.filter((b) => b.status === 'lost').length;
   const pendingBets = bets.filter((b) => b.status === 'pending').length;
-  const winRate = totalBets > 0 ? (wonBets / (wonBets + lostBets)) * 100 : 0;
+  const winRate = wonBets + lostBets > 0 ? (wonBets / (wonBets + lostBets)) * 100 : 0;
 
   // Calculate profit/loss
   const totalStaked = bets.reduce((sum, b) => sum + b.stake, 0);
@@ -52,8 +47,8 @@ export default async function StreamDetailPage({ params }: Props) {
 
   // Growth calculation
   const growthPercent = stream.initialStake > 0
-  ? ((stream.currentBalance - stream.initialStake) / stream.initialStake) * 100
-  : 0;
+    ? ((stream.currentBalance - stream.initialStake) / stream.initialStake) * 100
+    : 0;
 
   const currency = bankroll?.currency || 'GBP';
 
@@ -265,13 +260,10 @@ export default async function StreamDetailPage({ params }: Props) {
                   <div className="flex-1">
                     {/* Selections */}
                     <div className="space-y-1">
-                      {bet.selections.map((selection, index) => (
+                      {bet.selections.map((selection) => (
                         <div key={selection.id} className="text-sm">
                           <span className="font-medium">
                             {selection.homeTeam} vs {selection.awayTeam}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {' '}• {selection.league?.name} • {selection.marketType?.name}
                           </span>
                           <span className="text-primary font-medium">
                             {' '}@ {selection.odds.toFixed(2)}
