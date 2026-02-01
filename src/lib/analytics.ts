@@ -1,12 +1,12 @@
-import { Bet, BetStatus } from '@prisma/client';
-
 // ==================== STREAK CALCULATION ====================
 export interface StreakResult {
   count: number;
   type: 'win' | 'loss' | null;
 }
 
-export function calculateStreak(bets: Array<{ status: BetStatus; settledAt: Date | null; placedAt: Date }>): StreakResult {
+export function calculateStreak(
+  bets: Array<{ status: string; settledAt: Date | null; placedAt: Date }>
+): StreakResult {
   const settledBets = bets
     .filter(bet => bet.status === 'won' || bet.status === 'lost')
     .sort((a, b) => {
@@ -36,51 +36,30 @@ export function calculateStreak(bets: Array<{ status: BetStatus; settledAt: Date
 
 // ==================== KELLY CRITERION CALCULATOR ====================
 export interface KellyResult {
-  kellyFraction: number;       // Optimal fraction of bankroll to bet
-  recommendedStake: number;    // Actual stake amount
-  halfKellyStake: number;      // Conservative half-Kelly
-  quarterKellyStake: number;   // Ultra-conservative quarter-Kelly
-  edge: number;                // Your edge percentage
-  isValueBet: boolean;         // Whether this is a +EV bet
+  kellyFraction: number;
+  recommendedStake: number;
+  halfKellyStake: number;
+  quarterKellyStake: number;
+  edge: number;
+  isValueBet: boolean;
 }
 
 /**
  * Calculate optimal bet size using Kelly Criterion
- * 
- * @param bankroll - Current bankroll amount
- * @param odds - Decimal odds (e.g., 1.50)
- * @param estimatedProbability - Your estimated win probability (0-1)
- * @returns Kelly calculation results
  */
 export function calculateKelly(
   bankroll: number,
   odds: number,
   estimatedProbability: number
 ): KellyResult {
-  // Kelly Formula: f* = (bp - q) / b
-  // Where:
-  // f* = fraction of bankroll to bet
-  // b = decimal odds - 1 (net odds)
-  // p = probability of winning
-  // q = probability of losing (1 - p)
-
-  const b = odds - 1; // Net odds (profit if win)
+  const b = odds - 1;
   const p = estimatedProbability;
   const q = 1 - p;
 
-  // Calculate implied probability from odds
   const impliedProbability = 1 / odds;
-  
-  // Your edge = your probability - implied probability
   const edge = (p - impliedProbability) * 100;
-
-  // Kelly fraction
   const kellyFraction = (b * p - q) / b;
-
-  // If kelly is negative, it's not a value bet
   const isValueBet = kellyFraction > 0;
-
-  // Cap Kelly at reasonable amounts (never bet more than 25%)
   const cappedKelly = Math.max(0, Math.min(kellyFraction, 0.25));
 
   return {
@@ -115,12 +94,10 @@ export interface ProfitLossResult {
   totalProfit: number;
   totalLoss: number;
   netProfitLoss: number;
-  profitableDays: number;
-  losingDays: number;
 }
 
 export function calculateProfitLoss(
-  bets: Array<{ status: BetStatus; stake: number; returns: number | null }>
+  bets: Array<{ status: string; stake: number; returns: number | null }>
 ): ProfitLossResult {
   let totalProfit = 0;
   let totalLoss = 0;
@@ -137,7 +114,5 @@ export function calculateProfitLoss(
     totalProfit,
     totalLoss,
     netProfitLoss: totalProfit - totalLoss,
-    profitableDays: 0, // Calculate separately if needed
-    losingDays: 0,
   };
 }
