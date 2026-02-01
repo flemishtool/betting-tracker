@@ -75,23 +75,14 @@ export default async function DashboardPage() {
   // Calculate streak using utility
   const streak = calculateStreak(recentBets);
 
+  // Use correct bankroll fields
+  const currentBankroll = bankroll?.availableCapital || bankroll?.totalCapital || 0;
+  const startingBankroll = bankroll?.totalDeposited || 0;
+  const currency = bankroll?.currency || 'GBP';
+
   // Prepare chart data (last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const dailyData = await prisma.bet.groupBy({
-    by: ['placedAt'],
-    where: {
-      status: { in: ['won', 'lost'] },
-      settledAt: { gte: thirtyDaysAgo },
-    },
-    _sum: { stake: true, returns: true },
-  });
-
-  // Build chart data
-  const chartData: { date: string; balance: number; profit: number }[] = [];
-  let runningBalance = bankroll?.currentBalance || 0;
-  let runningProfit = 0;
 
   // Get bets grouped by day for chart
   const betsForChart = await prisma.bet.findMany({
@@ -123,9 +114,9 @@ export default async function DashboardPage() {
     }
   });
 
-  // Convert to chart array
+  // Build chart data
+  const chartData: { date: string; balance: number; profit: number }[] = [];
   let cumulativeProfit = 0;
-  const startBalance = bankroll?.startingBalance || 0;
   
   Array.from(byDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
@@ -133,12 +124,10 @@ export default async function DashboardPage() {
       cumulativeProfit += data.profit;
       chartData.push({
         date: new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-        balance: startBalance + cumulativeProfit,
+        balance: startingBankroll + cumulativeProfit,
         profit: cumulativeProfit,
       });
     });
-
-  const currency = bankroll?.currency || 'GBP';
 
   return (
     <div className="space-y-6">
@@ -152,12 +141,12 @@ export default async function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Bankroll Card */}
         <div className="rounded-xl border bg-gradient-to-br from-green-500/20 to-green-500/5 p-6">
-          <p className="text-sm text-muted-foreground">Current Bankroll</p>
+          <p className="text-sm text-muted-foreground">Available Capital</p>
           <p className="mt-1 text-3xl font-bold text-green-500">
-            {formatCurrency(bankroll?.currentBalance || 0, currency)}
+            {formatCurrency(currentBankroll, currency)}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            Started: {formatCurrency(bankroll?.startingBalance || 0, currency)}
+            Total: {formatCurrency(bankroll?.totalCapital || 0, currency)}
           </p>
         </div>
 
@@ -215,7 +204,7 @@ export default async function DashboardPage() {
             <BalanceChart 
               data={chartData} 
               currency={currency}
-              startingBalance={bankroll?.startingBalance || 0}
+              startingBalance={startingBankroll}
             />
           </div>
           <div className="rounded-xl border bg-card p-6">
@@ -252,7 +241,7 @@ export default async function DashboardPage() {
                   {formatCurrency(stream.currentBalance, currency)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Day {stream.currentDay + 1} • Target: {stream.targetDailyOdds}x
+                  Day {stream.currentDay + 1} • Target: {stream.targetDailyOdds.toFixed(2)}x
                 </p>
               </Link>
             ))}
