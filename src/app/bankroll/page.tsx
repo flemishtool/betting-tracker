@@ -33,7 +33,9 @@ export default async function BankrollPage() {
   const totalBankroll = bankroll.totalCapital;
   const availableCapital = bankroll.availableCapital;
   const deployedCapital = bankroll.deployedCapital;
-  const totalProfit = bankroll.totalProfit;
+  
+  // Calculate profit: current total - total deposited + total withdrawn
+  const totalProfit = totalBankroll - bankroll.totalDeposited + bankroll.totalWithdrawn;
 
   const deploymentPercent = totalBankroll > 0 
     ? (deployedCapital / totalBankroll) * 100 
@@ -54,12 +56,18 @@ export default async function BankrollPage() {
           <p className="mt-1 text-3xl font-bold text-primary">
             {formatCurrency(totalBankroll, bankroll.currency)}
           </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Deposited: {formatCurrency(bankroll.totalDeposited, bankroll.currency)}
+          </p>
         </div>
 
         <div className="rounded-xl border bg-gradient-to-br from-green-500/20 to-green-500/5 p-6">
           <p className="text-sm text-muted-foreground">Available Capital</p>
           <p className="mt-1 text-3xl font-bold text-green-500">
             {formatCurrency(availableCapital, bankroll.currency)}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Ready to deploy
           </p>
         </div>
 
@@ -81,6 +89,9 @@ export default async function BankrollPage() {
           <p className="text-sm text-muted-foreground">Total Profit/Loss</p>
           <p className={`mt-1 text-3xl font-bold ${totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {totalProfit >= 0 ? '+' : ''}{formatCurrency(totalProfit, bankroll.currency)}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Withdrawn: {formatCurrency(bankroll.totalWithdrawn, bankroll.currency)}
           </p>
         </div>
       </div>
