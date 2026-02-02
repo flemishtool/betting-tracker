@@ -1,21 +1,13 @@
 import prisma from '@/lib/prisma';
-import LeagueForm from './LeagueForm';
 
 export default async function LeaguesPage() {
-  let leagues: { id: string; name: string; country: string; isActive: boolean; _count: { selections: number } }[] = [];
+  const leagues = await prisma.league.findMany({
+    orderBy: [{ country: 'asc' }, { name: 'asc' }],
+    include: {
+      _count: { select: { selections: true } },
+    },
+  });
 
-  try {
-    leagues = await prisma.league.findMany({
-      orderBy: [{ country: 'asc' }, { name: 'asc' }],
-      include: {
-        _count: { select: { selections: true } },
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching leagues:', error);
-  }
-
-  // Group by country
   const leaguesByCountry = leagues.reduce((acc, league) => {
     const country = league.country || 'Other';
     if (!acc[country]) acc[country] = [];
@@ -25,20 +17,11 @@ export default async function LeaguesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">🏆 Leagues</h1>
-          <p className="text-muted-foreground">Manage your tracked leagues ({leagues.length} total)</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">🏆 Leagues</h1>
+        <p className="text-muted-foreground">Manage your tracked leagues ({leagues.length} total)</p>
       </div>
 
-      {/* Add New League */}
-      <div className="rounded-xl border bg-card p-6">
-        <h2 className="text-lg font-semibold mb-4">➕ Add New League</h2>
-        <LeagueForm />
-      </div>
-
-      {/* Leagues List */}
       <div className="space-y-6">
         {Object.entries(leaguesByCountry).map(([country, countryLeagues]) => (
           <div key={country} className="rounded-xl border bg-card p-6">
@@ -75,7 +58,7 @@ export default async function LeaguesPage() {
           <div className="rounded-xl border bg-card p-12 text-center text-muted-foreground">
             <div className="text-6xl mb-4">🏆</div>
             <p className="text-lg">No leagues yet</p>
-            <p className="text-sm mt-1">Add your first league above</p>
+            <p className="text-sm mt-1">Leagues will be created automatically when you add selections</p>
           </div>
         )}
       </div>
