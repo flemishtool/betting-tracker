@@ -21,11 +21,9 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r bg-card">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="border-b p-6">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl">🎯</span>
-            <span className="text-xl font-bold">BetTracker</span>
-          </Link>
+        <div className="flex h-16 items-center gap-2 border-b px-6">
+          <span className="text-2xl">🎯</span>
+          <span className="text-xl font-bold">Betting Tracker</span>
         </div>
 
         {/* Navigation */}
@@ -45,7 +43,7 @@ export default function Sidebar() {
                 }`}
               >
                 <span className="text-lg">{link.icon}</span>
-                {link.label}
+                <span>{link.label}</span>
               </Link>
             );
           })}
@@ -53,9 +51,10 @@ export default function Sidebar() {
 
         {/* Footer */}
         <div className="border-t p-4">
-          <p className="text-xs text-muted-foreground text-center">
-            v1.0.0 • Bet Responsibly
-          </p>
+          <div className="rounded-lg bg-muted p-3 text-center text-xs text-muted-foreground">
+            <p className="font-medium">Betting Tracker v1.0</p>
+            <p>Track • Analyze • Profit</p>
+          </div>
         </div>
       </div>
     </aside>
