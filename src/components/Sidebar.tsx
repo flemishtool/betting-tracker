@@ -50,10 +50,10 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Footer */}
+        {/* Footer - Added v2 marker */}
         <div className="border-t p-4">
           <div className="rounded-lg bg-muted p-3 text-center text-xs text-muted-foreground">
-            <p className="font-medium">Betting Tracker v1.0</p>
+            <p className="font-medium">Betting Tracker v2</p>
             <p>Track • Analyze • Profit</p>
           </div>
         </div>
