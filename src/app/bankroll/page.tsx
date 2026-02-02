@@ -4,26 +4,44 @@ import BankrollManager from '@/components/BankrollManager';
 import Link from 'next/link';
 
 export default async function BankrollPage() {
-  const [bankroll, streams, recentBets] = await Promise.all([
-    prisma.bankroll.findFirst(),
-    prisma.stream.findMany({
-      where: { status: 'active' },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.bet.findMany({
-      where: { status: { in: ['won', 'lost'] } },
-      include: { stream: true },
-      orderBy: { settledAt: 'desc' },
-      take: 10,
-    }),
-  ]);
+  let bankroll = null;
+  let streams: { id: string; name: string; currentBalance: number; currentDay: number }[] = [];
+  let recentBets: { id: string; status: string; stake: number; returns: number | null; settledAt: Date | null; stream: { name: string } }[] = [];
+
+  try {
+    [bankroll, streams, recentBets] = await Promise.all([
+      prisma.bankroll.findFirst(),
+      prisma.stream.findMany({
+        where: { status: 'active' },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          currentBalance: true,
+          currentDay: true,
+        },
+      }),
+      prisma.bet.findMany({
+        where: { status: { in: ['won', 'lost'] } },
+        include: { stream: { select: { name: true } } },
+        orderBy: { settledAt: 'desc' },
+        take: 10,
+      }),
+    ]);
+  } catch (error) {
+    console.error('Error fetching bankroll data:', error);
+  }
 
   if (!bankroll) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
+        <div className="text-6xl mb-4">💰</div>
         <h1 className="text-2xl font-bold mb-4">No Bankroll Found</h1>
-        <p className="text-muted-foreground mb-4">Set up your bankroll in Settings first.</p>
-        <Link href="/settings" className="rounded-lg bg-primary px-6 py-2 text-primary-foreground">
+        <p className="text-muted-foreground mb-6">Set up your bankroll in Settings first.</p>
+        <Link 
+          href="/settings" 
+          className="rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground hover:bg-primary/90"
+        >
           Go to Settings
         </Link>
       </div>
@@ -146,7 +164,15 @@ export default async function BankrollPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground py-4 text-center">No active streams</p>
+            <div className="text-center py-6">
+              <p className="text-sm text-muted-foreground mb-3">No active streams</p>
+              <Link
+                href="/streams"
+                className="text-sm text-primary hover:underline"
+              >
+                Create a stream →
+              </Link>
+            </div>
           )}
         </div>
       </div>

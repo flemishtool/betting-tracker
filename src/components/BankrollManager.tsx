@@ -58,7 +58,7 @@ export default function BankrollManager({
         throw new Error(data.error || 'Failed to process');
       }
 
-      setSuccess(data.message);
+      setSuccess(data.message || 'Success!');
       setAmount('');
       
       setTimeout(() => {
@@ -91,14 +91,14 @@ export default function BankrollManager({
       {!isOpen ? (
         <div className="flex gap-2">
           <button
-            onClick={() => { setType('deposit'); setIsOpen(true); setError(''); }}
+            onClick={() => { setType('deposit'); setIsOpen(true); setError(''); setSuccess(''); }}
             className="flex-1 rounded-lg bg-green-600 px-4 py-3 font-medium text-white hover:bg-green-700"
           >
             ➕ Add Funds
           </button>
           <button
-            onClick={() => { setType('withdraw'); setIsOpen(true); setError(''); }}
-            className="flex-1 rounded-lg bg-orange-600 px-4 py-3 font-medium text-white hover:bg-orange-700"
+            onClick={() => { setType('withdraw'); setIsOpen(true); setError(''); setSuccess(''); }}
+            className="flex-1 rounded-lg bg-orange-600 px-4 py-3 font-medium text-white hover:bg-orange-700 disabled:opacity-50"
             disabled={availableCapital <= 0}
           >
             💸 Withdraw
@@ -178,6 +178,7 @@ export default function BankrollManager({
                   type="button"
                   onClick={() => setAmount((maxWithdraw * fraction).toFixed(2))}
                   className="rounded-lg border px-3 py-1 text-sm hover:bg-accent"
+                  disabled={maxWithdraw <= 0}
                 >
                   {fraction === 1 ? 'Max' : `${fraction * 100}%`}
                 </button>
@@ -200,7 +201,7 @@ export default function BankrollManager({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => { setIsOpen(false); setAmount(''); setError(''); }}
+              onClick={() => { setIsOpen(false); setAmount(''); setError(''); setSuccess(''); }}
               className="flex-1 rounded-lg border py-3 font-medium hover:bg-accent"
             >
               Cancel

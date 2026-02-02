@@ -2,12 +2,18 @@ import prisma from '@/lib/prisma';
 import LeagueForm from './LeagueForm';
 
 export default async function LeaguesPage() {
-  const leagues = await prisma.league.findMany({
-    orderBy: [{ country: 'asc' }, { name: 'asc' }],
-    include: {
-      _count: { select: { selections: true } },
-    },
-  });
+  let leagues: { id: string; name: string; country: string; isActive: boolean; _count: { selections: number } }[] = [];
+
+  try {
+    leagues = await prisma.league.findMany({
+      orderBy: [{ country: 'asc' }, { name: 'asc' }],
+      include: {
+        _count: { select: { selections: true } },
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching leagues:', error);
+  }
 
   // Group by country
   const leaguesByCountry = leagues.reduce((acc, league) => {
@@ -67,6 +73,7 @@ export default async function LeaguesPage() {
 
         {leagues.length === 0 && (
           <div className="rounded-xl border bg-card p-12 text-center text-muted-foreground">
+            <div className="text-6xl mb-4">🏆</div>
             <p className="text-lg">No leagues yet</p>
             <p className="text-sm mt-1">Add your first league above</p>
           </div>

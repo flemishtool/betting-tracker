@@ -38,20 +38,40 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         ? {
             totalCapital: { increment: amount },
             availableCapital: { increment: amount },
+            totalDeposited: { increment: amount },
           }
         : {
             totalCapital: { decrement: amount },
             availableCapital: { decrement: amount },
+            totalWithdrawn: { increment: amount },
           },
     });
+
+    const symbol = bankroll.currency === 'GBP' ? '£' : bankroll.currency === 'EUR' ? '€' : '$';
 
     return NextResponse.json({
       success: true,
       bankroll: updatedBankroll,
-      message: `Successfully ${type === 'deposit' ? 'added' : 'withdrew'} £${amount.toFixed(2)}`,
+      message: `Successfully ${type === 'deposit' ? 'added' : 'withdrew'} ${symbol}${amount.toFixed(2)}`,
     });
   } catch (error) {
     console.error('Error managing bankroll:', error);
     return NextResponse.json({ error: 'Failed to manage bankroll' }, { status: 500 });
+  }
+}
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+    const bankroll = await prisma.bankroll.findUnique({ where: { id } });
+
+    if (!bankroll) {
+      return NextResponse.json({ error: 'Bankroll not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(bankroll);
+  } catch (error) {
+    console.error('Error fetching bankroll:', error);
+    return NextResponse.json({ error: 'Failed to fetch bankroll' }, { status: 500 });
   }
 }
