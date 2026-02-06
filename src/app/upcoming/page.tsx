@@ -192,7 +192,8 @@ export default function UpcomingFixturesPage() {
         fixture: fixtureStr,
         market,
         odds,
-        league: fixture.league?.name || 'Unknown'
+        league: fixture.league?.name || 'Unknown',
+        matchTime: fixture.kickoff
       }]);
     }
   };
