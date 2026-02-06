@@ -233,7 +233,7 @@ export default function UpcomingFixturesPage() {
   const getFlag = (country: string): string => {
     const code = countryToCode[country];
     if (!code) return '';
-    const codePoints = [...code.toUpperCase()].map(
+    const codePoints = Array.from(code.toUpperCase()).map(
       char => 0x1F1E6 - 65 + char.charCodeAt(0)
     );
     return String.fromCodePoint(...codePoints);
@@ -536,3 +536,4 @@ function FixtureCard({
     </div>
   );
 }
+
