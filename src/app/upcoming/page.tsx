@@ -204,6 +204,12 @@ export default function UpcomingFixturesPage() {
 
   const clearBetSlip = () => setBetSlip([]);
 
+  const updateOdds = (idx: number, newOdds: number) => {
+    setBetSlip(prev => prev.map((item, i) => 
+      i === idx ? { ...item, odds: newOdds } : item
+    ));
+  };
+
   const totalOdds = betSlip.reduce((acc, item) => acc * item.odds, 1);
 
   // Country to ISO code mapping
@@ -444,7 +450,14 @@ export default function UpcomingFixturesPage() {
                       <div className="font-medium text-sm">{item.fixture}</div>
                       <div className="flex justify-between items-center mt-1">
                         <span className="text-green-400">{item.market}</span>
-                        <span className="font-bold">{item.odds.toFixed(2)}</span>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="1.01"
+                            value={item.odds}
+                            onChange={(e) => updateOdds(idx, parseFloat(e.target.value) || item.odds)}
+                            className="w-16 bg-gray-600 text-right font-bold rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
                       </div>
                       <button
                         onClick={() => setBetSlip(prev => prev.filter((_, i) => i !== idx))}
@@ -536,4 +549,5 @@ function FixtureCard({
     </div>
   );
 }
+
 
