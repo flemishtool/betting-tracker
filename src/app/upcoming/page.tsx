@@ -206,21 +206,38 @@ export default function UpcomingFixturesPage() {
 
   const totalOdds = betSlip.reduce((acc, item) => acc * item.odds, 1);
 
-  const countryFlags: Record<string, string> = {
-    'England': '??????????????', 'Scotland': '??????????????', 'Wales': '??????????????',
-    'Spain': '????', 'Germany': '????', 'Italy': '????', 'France': '????',
-    'Netherlands': '????', 'Portugal': '????', 'Belgium': '????',
-    'Turkey': '????', 'Greece': '????', 'Austria': '????', 'Switzerland': '????',
-    'Poland': '????', 'Czech Republic': '????', 'Denmark': '????', 'Sweden': '????',
-    'Norway': '????', 'Finland': '????', 'Russia': '????', 'Ukraine': '????',
-    'Croatia': '????', 'Serbia': '????', 'Romania': '????', 'Ireland': '????',
-    'USA': '????', 'Mexico': '????', 'Brazil': '????', 'Argentina': '????',
-    'Australia': '????', 'Japan': '????', 'South Korea': '????', 'China': '????',
-    'Saudi Arabia': '????', 'International': '??', 'Europe': '????',
+  // Country to ISO code mapping
+  const countryToCode: Record<string, string> = {
+    'England': 'GB', 'Scotland': 'GB', 'Wales': 'GB', 'Northern Ireland': 'GB',
+    'Spain': 'ES', 'Germany': 'DE', 'Italy': 'IT', 'France': 'FR',
+    'Netherlands': 'NL', 'Portugal': 'PT', 'Belgium': 'BE',
+    'Turkey': 'TR', 'Greece': 'GR', 'Austria': 'AT', 'Switzerland': 'CH',
+    'Poland': 'PL', 'Czech Republic': 'CZ', 'Czechia': 'CZ', 'Denmark': 'DK', 'Sweden': 'SE',
+    'Norway': 'NO', 'Finland': 'FI', 'Russia': 'RU', 'Ukraine': 'UA',
+    'Croatia': 'HR', 'Serbia': 'RS', 'Romania': 'RO', 'Ireland': 'IE',
+    'USA': 'US', 'United States': 'US', 'Mexico': 'MX', 'Brazil': 'BR', 'Argentina': 'AR',
+    'Australia': 'AU', 'Japan': 'JP', 'South Korea': 'KR', 'China': 'CN',
+    'Saudi Arabia': 'SA', 'International': 'UN', 'Europe': 'EU',
+    'Colombia': 'CO', 'Chile': 'CL', 'Peru': 'PE', 'Ecuador': 'EC', 'Uruguay': 'UY',
+    'Hungary': 'HU', 'Bulgaria': 'BG', 'Slovakia': 'SK', 'Slovenia': 'SI',
+    'Bosnia and Herzegovina': 'BA', 'North Macedonia': 'MK', 'Albania': 'AL',
+    'Montenegro': 'ME', 'Cyprus': 'CY', 'Malta': 'MT', 'Iceland': 'IS',
+    'Israel': 'IL', 'United Arab Emirates': 'AE', 'Qatar': 'QA', 'Kuwait': 'KW',
+    'Egypt': 'EG', 'Morocco': 'MA', 'Tunisia': 'TN', 'Algeria': 'DZ',
+    'South Africa': 'ZA', 'Nigeria': 'NG', 'Ghana': 'GH', 'Senegal': 'SN',
+    'India': 'IN', 'Indonesia': 'ID', 'Thailand': 'TH', 'Vietnam': 'VN', 'Malaysia': 'MY',
+    'Singapore': 'SG', 'Canada': 'CA', 'New Zealand': 'NZ', 'World': 'UN',
   };
 
-  const getFlag = (country: string) => countryFlags[country] || '???';
-
+  // Convert ISO code to flag emoji
+  const getFlag = (country: string): string => {
+    const code = countryToCode[country];
+    if (!code) return '';
+    const codePoints = [...code.toUpperCase()].map(
+      char => 0x1F1E6 - 65 + char.charCodeAt(0)
+    );
+    return String.fromCodePoint(...codePoints);
+  };
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-8">
@@ -356,11 +373,11 @@ export default function UpcomingFixturesPage() {
                           className="text-xl hover:scale-110 transition"
                           title={favoriteCountries.includes(country) ? 'Remove from favorites' : 'Add to favorites'}
                         >
-                          {favoriteCountries.includes(country) ? '?' : '?'}
+                          {favoriteCountries.includes(country) ? "★" : "☆"}
                         </button>
                       </div>
                       <span className="text-gray-400 text-xl">
-                        {collapsedCountries.has(country) ? '?' : '?'}
+                        {collapsedCountries.has(country) ? "▶" : "▼"}
                       </span>
                     </button>
                     
@@ -448,7 +465,7 @@ export default function UpcomingFixturesPage() {
                     href={`/streams?betSlip=${encodeURIComponent(JSON.stringify(betSlip))}`}
                     className="block w-full bg-green-600 hover:bg-green-500 text-center py-3 rounded font-semibold transition"
                   >
-                    Add to Stream ?
+                    Add to Stream
                   </Link>
                 </div>
               </div>
@@ -495,7 +512,7 @@ function FixtureCard({
                 className="hover:scale-110 transition"
                 title={favoriteLeagues.includes(fixture.league.name) ? 'Remove from favorites' : 'Add to favorites'}
               >
-                {favoriteLeagues.includes(fixture.league.name) ? '?' : '?'}
+                {favoriteLeagues.includes(fixture.league.name) ? "★" : "☆"}
               </button>
             )}
             <span>� {formatDate(fixture.kickoff)}</span>
