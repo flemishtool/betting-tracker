@@ -1,13 +1,15 @@
-import prisma from '@/lib/prisma';
+﻿import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import BetForm from './BetForm';
 
 interface Props {
   params: Promise<{ streamId: string }>;
+  searchParams: Promise<{ betSlip?: string }>;
 }
 
-export default async function NewBetPage({ params }: Props) {
+export default async function NewBetPage({ params, searchParams }: Props) {
   const { streamId } = await params;
+  const { betSlip } = await searchParams;
 
   const [stream, leagues, marketTypes] = await Promise.all([
     prisma.stream.findUnique({
@@ -25,7 +27,6 @@ export default async function NewBetPage({ params }: Props) {
     notFound();
   }
 
-  // Group leagues by country
   const leaguesByCountry: Record<string, typeof leagues> = {};
   leagues.forEach((league) => {
     if (!leaguesByCountry[league.country]) {
@@ -34,7 +35,6 @@ export default async function NewBetPage({ params }: Props) {
     leaguesByCountry[league.country].push(league);
   });
 
-  // Group markets by category
   const marketsByCategory: Record<string, typeof marketTypes> = {};
   marketTypes.forEach((market) => {
     if (!marketsByCategory[market.category]) {
@@ -43,12 +43,29 @@ export default async function NewBetPage({ params }: Props) {
     marketsByCategory[market.category].push(market);
   });
 
+  let initialBetSlip: Array<{
+    fixtureId: string;
+    fixture: string;
+    market: string;
+    odds: number;
+    league: string;
+    matchTime?: string;
+  }> = [];
+  
+  if (betSlip) {
+    try {
+      initialBetSlip = JSON.parse(betSlip);
+    } catch (e) {
+      console.error('Failed to parse betSlip:', e);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Place Bet</h1>
         <p className="text-muted-foreground">
-          Stream: {stream.name} • Day {stream.currentDay + 1}
+          Stream: {stream.name} - Day {stream.currentDay + 1}
         </p>
       </div>
 
@@ -56,6 +73,7 @@ export default async function NewBetPage({ params }: Props) {
         stream={stream}
         leaguesByCountry={leaguesByCountry}
         marketsByCategory={marketsByCategory}
+        initialBetSlip={initialBetSlip}
       />
     </div>
   );

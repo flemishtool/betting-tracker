@@ -1,13 +1,71 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import prisma from '@/lib/prisma';
-import { formatCurrency, formatPercentage, formatDate, getStatusBgColor } from '@/lib/utils';
+import { formatCurrency, formatDate, getStatusBgColor } from '@/lib/utils';
+import StreamSelector from './StreamSelector';
 
 export const dynamic = 'force-dynamic';
 
-export default async function StreamsPage() {
+interface Props {
+  searchParams: Promise<{ betSlip?: string }>;
+}
+
+export default async function StreamsPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const betSlipParam = params.betSlip;
+  
   const streams = await prisma.stream.findMany({
+    where: { status: 'active' },
     orderBy: { createdAt: 'desc' },
   });
+
+  // If we have a betSlip, show the stream selector
+  if (betSlipParam) {
+    let betSlip: Array<{
+      fixtureId: string;
+      fixture: string;
+      market: string;
+      odds: number;
+      league: string;
+    }> = [];
+    
+    try {
+      betSlip = JSON.parse(betSlipParam);
+    } catch (e) {
+      // Invalid JSON, ignore
+    }
+
+    if (betSlip.length > 0) {
+      return (
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold">Select Stream for Bet</h1>
+          
+          <div className="bg-card border rounded-xl p-6 mb-6">
+            <h2 className="font-semibold mb-3">Your Selections ({betSlip.length})</h2>
+            <div className="space-y-2">
+              {betSlip.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center text-sm bg-muted/50 rounded p-2">
+                  <div>
+                    <div className="text-muted-foreground">{item.league}</div>
+                    <div>{item.fixture}</div>
+                    <div className="text-primary">{item.market}</div>
+                  </div>
+                  <div className="font-bold">{item.odds.toFixed(2)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 pt-4 border-t flex justify-between items-center">
+              <span>Total Odds:</span>
+              <span className="text-xl font-bold text-primary">
+                {betSlip.reduce((acc, item) => acc * item.odds, 1).toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          <StreamSelector streams={streams} betSlip={betSlipParam} />
+        </div>
+      );
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -32,11 +90,10 @@ export default async function StreamsPage() {
         <div className="space-y-4">
           {streams.map((stream) => (
             <div key={stream.id} className="rounded-xl border bg-card p-6">
-              {/* Debug: Show Stream ID */}
               <p className="mb-2 text-xs text-muted-foreground font-mono">
                 ID: {stream.id}
               </p>
-              
+
               <Link
                 href={`/streams/${stream.id}`}
                 className="block hover:opacity-80"
@@ -59,23 +116,20 @@ export default async function StreamsPage() {
                   </div>
                 </div>
               </Link>
-              
-              {/* Quick Actions */}
+
               <div className="mt-4 flex gap-2">
                 <Link
                   href={`/streams/${stream.id}`}
-                  className="rounded border px-3 py-1 text-sm hover:bg-accent"
+                  className="rounded-lg border bg-background px-3 py-1.5 text-sm hover:bg-muted"
                 >
                   View Details
                 </Link>
-                {stream.status === 'active' && (
-                  <Link
-                    href={`/bets/new/${stream.id}`}
-                    className="rounded bg-primary px-3 py-1 text-sm text-primary-foreground hover:bg-primary/90"
-                  >
-                    + Add Bet
-                  </Link>
-                )}
+                <Link
+                  href={`/bets/new/${stream.id}`}
+                  className="rounded-lg border bg-background px-3 py-1.5 text-sm hover:bg-muted"
+                >
+                  + Add Bet
+                </Link>
               </div>
             </div>
           ))}
