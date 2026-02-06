@@ -20,7 +20,7 @@ export async function GET() {
       hasApiKey: !!config?.apiKey,
       fixtureCount: upcomingFixtures.length,
       fixtures: upcomingFixtures.map(f => ({
-        id: f.apiFixtureId,
+        id: f.apiFootballId,
         match: `${f.homeTeamName} vs ${f.awayTeamName}`,
         kickoff: f.kickoff
       }))
@@ -29,3 +29,4 @@ export async function GET() {
     return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 });
   }
 }
+

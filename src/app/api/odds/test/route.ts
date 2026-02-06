@@ -18,7 +18,7 @@ export async function GET() {
     return NextResponse.json({ error: 'No upcoming fixtures' });
   }
 
-  const url = `https://v3.football.api-sports.io/odds?fixture=${fixture.apiFixtureId}`;
+  const url = `https://v3.football.api-sports.io/odds?fixture=${fixture.apiFootballId}`;
   const response = await fetch(url, {
     headers: { 'x-apisports-key': config.apiKey },
   });
@@ -26,10 +26,11 @@ export async function GET() {
 
   return NextResponse.json({
     fixture: `${fixture.homeTeamName} vs ${fixture.awayTeamName}`,
-    fixtureId: fixture.apiFixtureId,
+    fixtureId: fixture.apiFootballId,
     kickoff: fixture.kickoff,
     hasOdds: data.response?.length > 0,
     bookmakerCount: data.response?.[0]?.bookmakers?.length || 0,
     rawErrors: data.errors,
   });
 }
+

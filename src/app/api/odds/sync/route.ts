@@ -1,63 +1,75 @@
-﻿export const dynamic = 'force-dynamic';
-
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-const BET_IDS = {
-  MATCH_WINNER: 1,
-  GOALS_OVER_UNDER: 5,
-  BTTS: 8,
-  DOUBLE_CHANCE: 12,
-};
+interface OddsValue {
+  value: string;
+  odd: string;
+}
 
-export async function POST(request: NextRequest) {
+interface BookmakerBet {
+  id: number;
+  name: string;
+  values: OddsValue[];
+}
+
+interface Bookmaker {
+  id: number;
+  name: string;
+  bets: BookmakerBet[];
+}
+
+interface OddsAPIResponse {
+  response: Array<{
+    bookmakers: Bookmaker[];
+  }>;
+}
+
+function getOdd(bet: BookmakerBet | undefined, valueName: string): number | null {
+  if (!bet) return null;
+  const value = bet.values.find(v => v.value === valueName);
+  return value ? parseFloat(value.odd) : null;
+}
+
+export async function POST(request: Request) {
   try {
     const config = await prisma.aPIConfig.findFirst();
     if (!config?.apiKey) {
-      return NextResponse.json({ error: 'No API key configured' }, { status: 400 });
+      return NextResponse.json({ error: 'API not configured' }, { status: 500 });
     }
 
+    const body = await request.json().catch(() => ({}));
+    const limit = body.limit || 10;
+
+    // Get upcoming fixtures that need odds
     const fixtures = await prisma.aPIFixture.findMany({
       where: {
         statusShort: 'NS',
         kickoff: { gte: new Date() },
       },
+      take: limit,
       orderBy: { kickoff: 'asc' },
-      take: 50,
     });
 
-    let oddsCreated = 0;
     let oddsUpdated = 0;
 
     for (const fixture of fixtures) {
       try {
-        const url = `https://v3.football.api-sports.io/odds?fixture=${fixture.apiFixtureId}`;
+        const url = `https://v3.football.api-sports.io/odds?fixture=${fixture.apiFootballId}`;
         const response = await fetch(url, {
           headers: { 'x-apisports-key': config.apiKey },
         });
+        const data: OddsAPIResponse = await response.json();
 
-        const data = await response.json();
-        
         if (!data.response?.[0]?.bookmakers?.length) continue;
 
-        const bookmaker = data.response[0].bookmakers.find((b: any) =>
-          b.name.toLowerCase().includes('bet365')
-        ) || data.response[0].bookmakers[0];
+        // Use first bookmaker
+        const bookmaker = data.response[0].bookmakers[0];
+        const bets = bookmaker.bets;
 
-        if (!bookmaker) continue;
-
-        const matchWinner = bookmaker.bets.find((b: any) => b.id === BET_IDS.MATCH_WINNER);
-        const goalsOU = bookmaker.bets.find((b: any) => b.id === BET_IDS.GOALS_OVER_UNDER);
-        const btts = bookmaker.bets.find((b: any) => b.id === BET_IDS.BTTS);
-        const doubleChance = bookmaker.bets.find((b: any) => b.id === BET_IDS.DOUBLE_CHANCE);
-
-        const getOdd = (bet: any, value: string): number | null => {
-          if (!bet?.values) return null;
-          const found = bet.values.find((v: any) => 
-            v.value.toLowerCase() === value.toLowerCase()
-          );
-          return found ? parseFloat(found.odd) : null;
-        };
+        const matchWinner = bets.find(b => b.name === 'Match Winner');
+        const goalsOU = bets.find(b => b.name === 'Goals Over/Under');
+        const btts = bets.find(b => b.name === 'Both Teams Score');
+        const doubleChance = bets.find(b => b.name === 'Double Chance');
 
         const oddsData = {
           bookmakerName: bookmaker.name,
@@ -72,35 +84,34 @@ export async function POST(request: NextRequest) {
           under25Goals: getOdd(goalsOU, 'Under 2.5'),
           over35Goals: getOdd(goalsOU, 'Over 3.5'),
           under35Goals: getOdd(goalsOU, 'Under 3.5'),
-          over45Goals: getOdd(goalsOU, 'Over 4.5'),
-          under45Goals: getOdd(goalsOU, 'Under 4.5'),
           bttsYes: getOdd(btts, 'Yes'),
           bttsNo: getOdd(btts, 'No'),
           homeOrDraw: getOdd(doubleChance, 'Home/Draw'),
           awayOrDraw: getOdd(doubleChance, 'Draw/Away'),
           homeOrAway: getOdd(doubleChance, 'Home/Away'),
-          updatedAt: new Date(),
+          fetchedAt: new Date(),
         };
 
-        await prisma.aPIOdds.upsert({
+        await prisma.aPIFixtureOdds.upsert({
           where: {
-            apiFixtureId_bookmakerName: {
-              apiFixtureId: fixture.apiFixtureId,
+            fixtureId_bookmakerName: {
+              fixtureId: fixture.id,
               bookmakerName: bookmaker.name,
             },
           },
           update: oddsData,
           create: {
-            apiFixtureId: fixture.apiFixtureId,
+            fixtureId: fixture.id,
             ...oddsData,
           },
         });
-        
+
         oddsUpdated++;
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-      } catch (err: any) {
-        console.error(`Fixture ${fixture.apiFixtureId}:`, err.message);
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        console.error(`Fixture ${fixture.apiFootballId}:`, message);
       }
     }
 
@@ -109,45 +120,30 @@ export async function POST(request: NextRequest) {
       stats: { fixturesProcessed: fixtures.length, oddsUpdated },
     });
 
-  } catch (error: any) {
-    console.error('Odds sync error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Odds sync error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function GET() {
   try {
-    const count = await prisma.aPIOdds.count();
+    const count = await prisma.aPIFixtureOdds.count();
     
-    const sample = await prisma.aPIOdds.findMany({
+    if (count === 0) {
+      return NextResponse.json({ message: 'No odds in database', count: 0 });
+    }
+
+    const sample = await prisma.aPIFixtureOdds.findMany({
       take: 5,
-      orderBy: { updatedAt: 'desc' },
+      include: { fixture: true },
+      orderBy: { fetchedAt: 'desc' },
     });
 
-    // Get fixture names separately
-    const fixtureIds = sample.map(s => s.apiFixtureId);
-    const fixtures = await prisma.aPIFixture.findMany({
-      where: { apiFixtureId: { in: fixtureIds } },
-      select: { apiFixtureId: true, homeTeamName: true, awayTeamName: true },
-    });
-
-    const fixtureMap = new Map(fixtures.map(f => [f.apiFixtureId, f]));
-
-    return NextResponse.json({
-      totalOdds: count,
-      sample: sample.map(o => {
-        const fix = fixtureMap.get(o.apiFixtureId);
-        return {
-          match: fix ? `${fix.homeTeamName} vs ${fix.awayTeamName}` : 'Unknown',
-          over05: o.over05Goals,
-          over15: o.over15Goals,
-          over25: o.over25Goals,
-          bttsYes: o.bttsYes,
-        };
-      }),
-    });
-  } catch (error: any) {
-    console.error('Odds GET error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ count, sample });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

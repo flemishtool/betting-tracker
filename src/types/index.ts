@@ -1,4 +1,4 @@
-export interface Stream {
+﻿export interface Stream {
   id: string;
   name: string;
   status: 'active' | 'completed' | 'failed';

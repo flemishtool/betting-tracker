@@ -19,7 +19,7 @@ export async function GET() {
   }
 
   // Now fetch from API for this exact fixture
-  const url = `https://v3.football.api-sports.io/odds?fixture=${oddsRecord.apiFixtureId}`;
+  const url = `https://v3.football.api-sports.io/odds?fixture=${oddsRecord.fixture.apiFootballId}`;
   const response = await fetch(url, {
     headers: { 'x-apisports-key': config.apiKey },
   });
@@ -35,7 +35,7 @@ export async function GET() {
 
   return NextResponse.json({
     fixture: `${oddsRecord.fixture.homeTeamName} vs ${oddsRecord.fixture.awayTeamName}`,
-    fixtureId: oddsRecord.apiFixtureId,
+    fixtureId: oddsRecord.fixture.apiFootballId,
     storedInDB: {
       over05: oddsRecord.over05Goals,
       over15: oddsRecord.over15Goals,
@@ -50,3 +50,4 @@ export async function GET() {
     }
   });
 }
+

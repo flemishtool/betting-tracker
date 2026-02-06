@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       success: true,
       fixture: {
         id: updated.id,
-        match: `${updated.homeTeam} vs ${updated.awayTeam}`,
+        match: `${updated.homeTeamName} vs ${updated.awayTeamName}`,
         league: updated.league?.name
       }
     });
@@ -23,3 +23,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

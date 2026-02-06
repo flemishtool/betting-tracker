@@ -182,3 +182,4 @@ function getRating(impliedProb: number, leagueRate: number | null): string {
   if (edge > -0.05) return 'Slight Undervalue';
   return 'Poor Value';
 }
+

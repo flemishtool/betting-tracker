@@ -281,7 +281,7 @@ export async function POST(request: NextRequest) {
             const parsedOdds = parseOdds(oddsData);
             
             if (parsedOdds && parsedOdds.bookmakerName) {
-              const bookmakerName = parsedOdds.bookmakerName as string;
+              const bookmakerName = parsedOdds.bookmakerName as unknown as string;
               delete parsedOdds.bookmakerName;
               
               // Upsert odds
@@ -394,3 +394,4 @@ export async function GET() {
     );
   }
 }
+

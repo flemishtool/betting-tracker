@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No upcoming fixtures' }, { status: 404 });
     }
 
-    const url = `https://v3.football.api-sports.io/odds?fixture=${fixture.apiFixtureId}`;
+    const url = `https://v3.football.api-sports.io/odds?fixture=${fixture.apiFootballId}`;
     const response = await fetch(url, {
       headers: { 'x-apisports-key': config.apiKey },
     });
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       fixture: `${fixture.homeTeamName} vs ${fixture.awayTeamName}`,
-      apiFixtureId: fixture.apiFixtureId,
+      apiFixtureId: fixture.apiFootballId,
       hasResponse: !!data.response?.length,
       bookmakersCount: data.response?.[0]?.bookmakers?.length || 0,
       bookmakerName: bookmaker?.name || 'none',
@@ -52,3 +52,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 });
   }
 }
+
+

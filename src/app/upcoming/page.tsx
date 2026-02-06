@@ -58,7 +58,7 @@ export default function UpcomingFixturesPage() {
     return true;
   });
 
-  const uniqueLeagues = [...new Set(fixtures.map(f => f.league?.name).filter(Boolean))].sort();
+  const uniqueLeagues = Array.from(new Set(fixtures.map(f => f.league?.name).filter((n): n is string => Boolean(n)))).sort();
 
   if (loading) {
     return (
@@ -191,3 +191,4 @@ export default function UpcomingFixturesPage() {
     </div>
   );
 }
+

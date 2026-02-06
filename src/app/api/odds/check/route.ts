@@ -5,13 +5,13 @@ import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const count = await prisma.aPIOdds.count();
+    const count = await prisma.aPIFixtureOdds.count();
     
     if (count === 0) {
       return NextResponse.json({ message: 'No odds in database', count: 0 });
     }
 
-    const sample = await prisma.aPIOdds.findMany({
+    const sample = await prisma.aPIFixtureOdds.findMany({
       take: 5,
     });
 
@@ -23,3 +23,4 @@ export async function GET() {
     }, { status: 500 });
   }
 }
+
